@@ -1,0 +1,28 @@
+
+.sidebar-container .bg-dark {
+    background-color: #23272a !important;
+  }
+  
+  .sidebar-container .nav-link {
+    color: #b9bbbe;
+    transition: color 0.2s;
+  }
+  
+  .sidebar-container .nav-link:hover {
+    color: #ffffff;
+  }
+  
+  .sidebar-container .dropdown-toggle {
+    color: #ffffff;
+  }
+  
+  .sidebar-container .dropdown-menu-dark {
+    background-color: #2e3136;
+  }
+  
+  .sidebar-container .content-area {
+    color: #f0f0f0;
+    background-color: #2e3136;
+    min-height: 100vh;
+  }
+  
