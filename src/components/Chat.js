@@ -2,7 +2,9 @@ import React, { useState, useEffect } from 'react';
 import io from 'socket.io-client';
 import axios from 'axios';
 
-const socket = io('http://localhost:5000');
+const port = 5003;
+
+const socket = io(`http://localhost:${port}`);
 
 function Chat() {
   const [friends, setFriends] = useState([]);
@@ -15,7 +17,7 @@ function Chat() {
   useEffect(() => {
     const fetchFriends = async () => {
       try {
-        const response = await axios.get(`http://localhost:5000/friends/${username}`);
+        const response = await axios.get(`http://localhost:${port}/friends/${username}`);
         setFriends(response.data);
       } catch (error) {
         console.error('Error fetching friends:', error);
@@ -29,7 +31,7 @@ function Chat() {
     if (selectedFriend) {
       const fetchMessages = async () => {
         try {
-          const response = await axios.get(`http://localhost:5000/messages/${username}/${selectedFriend}`);
+          const response = await axios.get(`http://localhost:${port}/messages/${username}/${selectedFriend}`);
           setMessages(response.data);
         } catch (error) {
           console.error('Error fetching messages:', error);

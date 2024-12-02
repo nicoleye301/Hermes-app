@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+const port = 5003;
 
 function FriendList() {
   const [username] = useState(localStorage.getItem('username')); // Logged-in user's username
@@ -12,7 +13,7 @@ function FriendList() {
   useEffect(() => {
     const fetchFriends = async () => {
       try {
-        const response = await axios.get(`http://localhost:5000/friends/${username}`);
+        const response = await axios.get(`http://localhost:${port}/friends/${username}`);
         setFriends(response.data);
       } catch (error) {
         console.error('Error fetching friends:', error);
@@ -27,7 +28,7 @@ function FriendList() {
     setSuccess('');
 
     try {
-      const response = await axios.post('http://localhost:5000/add-friend', {
+      const response = await axios.post(`http://localhost:${port}/add-friend`, {
         username,
         friendUsername,
       });
@@ -35,7 +36,7 @@ function FriendList() {
       setFriendUsername(''); // Clear input
 
       // Update friends list
-      const updatedFriends = await axios.get(`http://localhost:5000/friends/${username}`);
+      const updatedFriends = await axios.get(`http://localhost:${port}/friends/${username}`);
       setFriends(updatedFriends.data);
     } catch (error) {
       setError(error.response?.data?.message || 'Error adding friend');

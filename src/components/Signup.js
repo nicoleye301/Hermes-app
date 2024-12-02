@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
+const port = 5003;
+
 function Signup() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -18,7 +20,7 @@ function Signup() {
     }
 
     try {
-      await axios.post('http://localhost:5000/register', { username, password });
+      await axios.post(`http://localhost:${port}/register`, { username, password });
       alert('Signup successful! Please log in.');
       navigate('/login');
     } catch (err) {
