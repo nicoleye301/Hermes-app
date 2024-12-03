@@ -4,10 +4,12 @@ const { Server } = require('socket.io');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const bcrypt = require('bcryptjs');
+const asyncHandler = require('express-async-handler');
 
 // Import Models
 const User = require('./models/User'); // User model
 const Message = require('./models/Message'); // Message model
+const Post = require('./models/Post'); //Post model
 
 // Initialize App
 const app = express();
@@ -22,7 +24,8 @@ app.use(express.json());
 mongoose.connect('mongodb+srv://nicoleye301:XgHVNsrpmFTh2ZV6@cluster0.05bnf.mongodb.net/hermes-chat', {
   useNewUrlParser: true,
   useUnifiedTopology: true,
-});
+}).then(() => console.log('Connected to MongoDB'))
+.catch((err) => console.error('MongoDB connection error:', err));
 
 // Middleware to find user by username
 async function findUserByUsername(req, res, next) {
@@ -238,6 +241,46 @@ app.put('/user/:username/nickname', findUserByUsername, async (req, res) => {
   }
 });
 
+// Add a post
+app.post('/post', async (req, res) => {
+  const { username, content } = req.body;
+
+  try {
+    console.log(`Saving post for user ${username}: ${content}`);
+    const post = new Post({ username, content });
+    await post.save();
+    res.status(201).json({ message: 'Post added successfully' });
+  } catch (error) {
+    console.error('Error adding post:', error);
+    res.status(500).json({ message: 'Error adding post', error });
+  }
+});
+
+// Get posts from friends and the user
+app.get('/posts/:username', async (req, res) => {
+  const { username } = req.params;
+
+  try {
+    // Find the user and populate friends
+    const user = await User.findOne({ username }).populate('friends', 'username');
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Get usernames of friends and include the user's own username
+    const friendUsernames = user.friends.map(friend => friend.username);
+    friendUsernames.push(username); // Include the user's own posts
+
+    // Find posts by the user and their friends
+    const posts = await Post.find({ username: { $in: friendUsernames } }).sort({ createdAt: -1 });
+
+    res.json(posts);
+  } catch (error) {
+    console.error('Error fetching posts:', error);
+    res.status(500).json({ message: 'Error fetching posts', error });
+  }
+});
+
 // Socket.IO for Real-Time Chat
 io.on('connection', (socket) => {
   console.log('New client connected:', socket.id);
@@ -262,3 +305,4 @@ io.on('connection', (socket) => {
 // Start Server
 const PORT = process.env.PORT || 5003;
 server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+

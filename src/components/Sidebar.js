@@ -25,6 +25,9 @@ function Sidebar() {
         <Link to="/profile" className="d-block p-3 link-light text-decoration-none" title="Profile">
           <i className="bi-person-circle" style={styles.icon}></i>
         </Link>
+        <Link to="/posts" className="d-block p-3 link-light text-decoration-none" title="Posts">
+          <i className="bi-card-text" style={styles.icon}></i> {/* Added new link for Posts */}
+        </Link>
         <button onClick={handleLogout} className="d-block p-3 link-light text-decoration-none border-0 bg-transparent" title="Logout" style={styles.logoutButton}>
           <i className="bi-box-arrow-right" style={styles.icon}></i>
         </button>
@@ -38,9 +41,9 @@ const styles = {
     position: 'fixed',
     top: 0,
     left: 0,
-    height: '100vh', // Full viewport height
-    width: '80px', // Sidebar width
-    backgroundColor: '#2c2f33', // Dark color matching chat theme
+    height: '100vh',
+    width: '80px', 
+    backgroundColor: '#2c2f33', 
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -57,7 +60,7 @@ const styles = {
   },
   icon: {
     fontSize: '28px',
-    color: '#7289da', // Blueish color for icons
+    color: '#7289da', 
   },
   logoutButton: {
     marginTop: 'auto',
