@@ -42,7 +42,7 @@
 
 //   const handleSendMessage = async (e) => {
 //     e.preventDefault();
-//     const sender = localStorage.getItem('username'); // Replace with the logged-in user
+//     const sender = username; // Replace with the logged-in user
 //     try {
 //       // Send the message via the backend
 //       await axios.post(`http://localhost:5003/groups/${groupId}/messages`, {

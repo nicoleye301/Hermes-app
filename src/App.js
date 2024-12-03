@@ -1,4 +1,4 @@
-import React from 'react';
+import React, {useState} from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Sidebar from './components/Sidebar';
 import Login from './components/Login';
@@ -10,23 +10,24 @@ import Profile from './components/Profile';
 import './App.css';
 
 function App() {
-  const isLoggedIn = !!localStorage.getItem('username'); // Check if user is logged in
+  // current username as a global variable that changes dynamically
+  const [currentUser,setCurrentUser] = useState(null);
 
   return (
     <Router>
       <div className="app-container">
         {/* Sidebar is visible only if the user is logged in */}
-        {isLoggedIn && <Sidebar />}
+        {currentUser && <Sidebar setCurrentUser={setCurrentUser} />}
 
-        <div className={`content-container ${isLoggedIn ? 'logged-in' : ''}`}>
+        <div className={`content-container ${currentUser ? 'logged-in' : ''}`}>
           <Routes>
-            <Route path="/" element={<Navigate to={isLoggedIn ? "/chat" : "/login"} />} />
-            <Route path="/login" element={<Login />} />
+            <Route path="/" element={<Navigate to={currentUser ? "/chat" : "/login"} />} />
+            <Route path="/login" element={<Login setCurrentUser={setCurrentUser} />} />
             <Route path="/signup" element={<Signup />} />
-            <Route path="/chat" element={<Chat />} />
-            <Route path="/friends" element={<FriendList />} />
-            <Route path="/profile" element={<Profile />} />
-            <Route path="/posts" element={<PostPage />} />
+            <Route path="/chat" element={<Chat username={currentUser}/>} />
+            <Route path="/friends" element={<FriendList username={currentUser}/>} />
+            <Route path="/profile" element={<Profile username={currentUser}/>} />
+            <Route path="/posts" element={<PostPage username={currentUser}/>} />
           </Routes>
         </div>
       </div>

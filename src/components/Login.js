@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-function Login() {
+function Login({setCurrentUser}) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -11,7 +11,7 @@ function Login() {
     e.preventDefault();
 
     if (username && password) {
-      localStorage.setItem('username', username);
+      setCurrentUser(username); // Set username globally
       navigate('/chat'); // Redirect to Chat
     } else {
       setError('Please enter valid credentials');

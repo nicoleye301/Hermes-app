@@ -4,8 +4,7 @@ import axios from 'axios';
 const port = 5003;
 const baseURL = `http://localhost:${port}`;
 
-const Profile = () => {
-  const [username] = useState(localStorage.getItem('username'));
+const Profile = ({username}) => {
   const [bio, setBio] = useState('');
   const [nickname, setNickname] = useState('');
   const [profilePicture, setProfilePicture] = useState('');

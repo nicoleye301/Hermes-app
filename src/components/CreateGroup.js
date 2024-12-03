@@ -1,6 +1,6 @@
 // import React, { useState } from 'react';
 
-// function CreateGroup() {
+// function CreateGroup({username}) {
 //   const [groupName, setGroupName] = useState('');
 //   const [members, setMembers] = useState('');
 
@@ -11,7 +11,7 @@
 //         headers: { 'Content-Type': 'application/json' },
 //         body: JSON.stringify({
 //           name: groupName,
-//           admin: localStorage.getItem('username'), // Current logged-in user as admin
+//           admin: username, // Current logged-in user as admin
 //           members: members.split(',').map((member) => member.trim()), // Convert comma-separated string to array
 //         }),
 //       });

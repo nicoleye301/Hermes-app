@@ -3,38 +3,34 @@ import { Link, useNavigate } from 'react-router-dom';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import 'bootstrap-icons/font/bootstrap-icons.css';
 
-function Sidebar() {
+function Sidebar({setCurrentUser}) {
   const navigate = useNavigate();
 
   const handleLogout = () => {
-    localStorage.removeItem('username'); // Clear user data
+    setCurrentUser(null); // Set loggedIn to false
     navigate('/login'); // Redirect to login page after logout
   };
-
-  const isLoggedIn = !!localStorage.getItem('username'); // Check if user is logged in
 
   return (
     <div style={styles.sidebar}>
       <div style={styles.iconContainer}>
-        {isLoggedIn && (
-          <>
-            <Link to="/chat" className="d-block p-3 link-light text-decoration-none" title="Chat">
-              <i className="bi-chat-dots" style={styles.icon}></i>
-            </Link>
-            <Link to="/friends" className="d-block p-3 link-light text-decoration-none" title="Friends">
-              <i className="bi-people" style={styles.icon}></i>
-            </Link>
-            <Link to="/profile" className="d-block p-3 link-light text-decoration-none" title="Profile">
-              <i className="bi-person-circle" style={styles.icon}></i>
-            </Link>
-            <Link to="/posts" className="d-block p-3 link-light text-decoration-none" title="Posts">
-              <i className="bi-card-text" style={styles.icon}></i>
-            </Link>
-            <button onClick={handleLogout} className="d-block p-3 link-light text-decoration-none border-0 bg-transparent" title="Logout" style={styles.logoutButton}>
-              <i className="bi-box-arrow-right" style={styles.icon}></i>
-            </button>
-          </>
-        )}
+        <>
+          <Link to="/chat" className="d-block p-3 link-light text-decoration-none" title="Chat">
+            <i className="bi-chat-dots" style={styles.icon}></i>
+          </Link>
+          <Link to="/friends" className="d-block p-3 link-light text-decoration-none" title="Friends">
+            <i className="bi-people" style={styles.icon}></i>
+          </Link>
+          <Link to="/profile" className="d-block p-3 link-light text-decoration-none" title="Profile">
+            <i className="bi-person-circle" style={styles.icon}></i>
+          </Link>
+          <Link to="/posts" className="d-block p-3 link-light text-decoration-none" title="Posts">
+            <i className="bi-card-text" style={styles.icon}></i>
+          </Link>
+          <button onClick={handleLogout} className="d-block p-3 link-light text-decoration-none border-0 bg-transparent" title="Logout" style={styles.logoutButton}>
+            <i className="bi-box-arrow-right" style={styles.icon}></i>
+          </button>
+        </>
       </div>
     </div>
   );

@@ -4,11 +4,10 @@ import axios from 'axios';
 const port = 5003;
 const baseURL = `http://localhost:${port}`;
 
-function PostPage() {
+function PostPage({ username }) {
   const [posts, setPosts] = useState([]);
   const [newPost, setNewPost] = useState('');
   const [profilePicture, setProfilePicture] = useState('/uploads/profile-pictures/default.jpg');
-  const username = localStorage.getItem('username');
 
   // Fetch posts from friends when the component mounts
   useEffect(() => {

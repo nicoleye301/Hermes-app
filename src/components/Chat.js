@@ -5,13 +5,12 @@ import axios from 'axios';
 const port = 5003;
 const socket = io(`http://localhost:${port}`);
 
-function Chat() {
+function Chat({username}) {
   const [friends, setFriends] = useState([]);
   const [selectedFriend, setSelectedFriend] = useState(null);
   const [messages, setMessages] = useState([]);
   const [message, setMessage] = useState('');
   const [userProfilePicture, setUserProfilePicture] = useState('');
-  const username = localStorage.getItem('username');
 
 // Fetch logged-in user's profile picture on load
   useEffect(() => {

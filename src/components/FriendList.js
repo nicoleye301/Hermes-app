@@ -3,8 +3,7 @@ import axios from 'axios';
 
 const port = 5003;
 
-function FriendList() {
-  const [username] = useState(localStorage.getItem('username')); // Logged-in user's username
+function FriendList({username}) {
   const [friendUsername, setFriendUsername] = useState('');
   const [friends, setFriends] = useState([]);
   const [error, setError] = useState('');
