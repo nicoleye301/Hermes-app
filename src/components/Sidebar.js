@@ -11,24 +11,41 @@ function Sidebar() {
     navigate('/login'); // Redirect to login page
   };
 
-  const isLoggedIn = !!localStorage.getItem('username'); // Check if user is logged in
-
   return (
     <div style={styles.sidebar}>
       <div style={styles.iconContainer}>
+        {/* Chat */}
         <Link to="/chat" className="d-block p-3 link-light text-decoration-none" title="Chat">
           <i className="bi-chat-dots" style={styles.icon}></i>
         </Link>
+
+        {/* Friends */}
         <Link to="/friends" className="d-block p-3 link-light text-decoration-none" title="Friends">
           <i className="bi-people" style={styles.icon}></i>
         </Link>
+
+        {/* Profile */}
         <Link to="/profile" className="d-block p-3 link-light text-decoration-none" title="Profile">
           <i className="bi-person-circle" style={styles.icon}></i>
         </Link>
+
+        {/* Posts */}
         <Link to="/posts" className="d-block p-3 link-light text-decoration-none" title="Posts">
-          <i className="bi-card-text" style={styles.icon}></i> {/* Added new link for Posts */}
+          <i className="bi-card-text" style={styles.icon}></i>
         </Link>
-        <button onClick={handleLogout} className="d-block p-3 link-light text-decoration-none border-0 bg-transparent" title="Logout" style={styles.logoutButton}>
+
+        {/* Create Group */}
+        <Link to="/create-group" className="d-block p-3 link-light text-decoration-none" title="Create Group">
+          <i className="bi-people-fill" style={styles.icon}></i>
+        </Link>
+
+        {/* Logout */}
+        <button
+          onClick={handleLogout}
+          className="d-block p-3 link-light text-decoration-none border-0 bg-transparent"
+          title="Logout"
+          style={styles.logoutButton}
+        >
           <i className="bi-box-arrow-right" style={styles.icon}></i>
         </button>
       </div>
@@ -42,8 +59,8 @@ const styles = {
     top: 0,
     left: 0,
     height: '100vh',
-    width: '80px', 
-    backgroundColor: '#2c2f33', 
+    width: '80px', // Adjust as needed for your design
+    backgroundColor: '#2c2f33', // Sidebar background color
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -60,10 +77,10 @@ const styles = {
   },
   icon: {
     fontSize: '28px',
-    color: '#7289da', 
+    color: '#7289da', // Icon color
   },
   logoutButton: {
-    marginTop: 'auto',
+    marginTop: 'auto', // Push to the bottom
     outline: 'none',
     cursor: 'pointer',
   },

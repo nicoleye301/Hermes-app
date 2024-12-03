@@ -5,12 +5,14 @@ import Login from './components/Login';
 import Signup from './components/Signup';
 import Chat from './components/Chat';
 import FriendList from './components/FriendList';
-import PostPage from './components/PostPage';
-import Profile from './components/Profile';
-import './App.css';
+import './App.css'; // Global styles
+import MyGroups from './components/MyGroups';
+import GroupChat from './components/GroupChat';
+import CreateGroup from './components/CreateGroup';
+import GroupList from './components/GroupList';
 
 function App() {
-  const isLoggedIn = !!localStorage.getItem('username'); // Check if user is logged in
+  const isLoggedIn = !!localStorage.getItem('username');
 
   return (
     <Router>
@@ -20,15 +22,17 @@ function App() {
           {isLoggedIn && <Sidebar />}
 
           {/* Main content area */}
-          <div className={`col p-3 min-vh-100 content-area ${isLoggedIn ? 'logged-in' : ''}`}>
+          <div className={`col-sm p-3 min-vh-100 content-area ${isLoggedIn ? 'logged-in' : ''}`}>
             <Routes>
               <Route path="/" element={<Navigate to={isLoggedIn ? "/chat" : "/login"} />} />
               <Route path="/login" element={<Login />} />
               <Route path="/signup" element={<Signup />} />
               <Route path="/chat" element={<Chat />} />
               <Route path="/friends" element={<FriendList />} />
-              <Route path="/profile" element={<Profile />} />
-              <Route path="/posts" element={<PostPage />} />
+              <Route path="/my-groups" element={<MyGroups />} />
+              <Route path="/group/:groupId" element={<GroupChat />} />
+              <Route path="/create-group" element={<CreateGroup />} />
+              <Route path="/groups" element={<GroupList />} />
             </Routes>
           </div>
         </div>

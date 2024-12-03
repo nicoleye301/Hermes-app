@@ -4,12 +4,11 @@ const { Server } = require('socket.io');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const bcrypt = require('bcryptjs');
-const asyncHandler = require('express-async-handler');
 
 // Import Models
 const User = require('./models/User'); // User model
 const Message = require('./models/Message'); // Message model
-const Post = require('./models/Post'); //Post model
+const Group = require('./models/Group'); // Group model
 
 // Initialize App
 const app = express();
@@ -24,49 +23,40 @@ app.use(express.json());
 mongoose.connect('mongodb+srv://nicoleye301:XgHVNsrpmFTh2ZV6@cluster0.05bnf.mongodb.net/hermes-chat', {
   useNewUrlParser: true,
   useUnifiedTopology: true,
-}).then(() => console.log('Connected to MongoDB'))
-.catch((err) => console.error('MongoDB connection error:', err));
+});
 
-// Middleware to find user by username
-async function findUserByUsername(req, res, next) {
-  const { username } = req.params;
+// Middleware for group validation
+async function validateGroupMembership(req, res, next) {
+  const { groupId } = req.params;
+  const userId = req.body.sender || req.query.userId;
 
   try {
-    const user = await User.findOne({ username });
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: "User not found",
-      });
+    const group = await Group.findById(groupId);
+    if (!group) {
+      return res.status(404).json({ message: 'Group not found' });
     }
-
-    req.user = user;
+    if (!group.members.includes(userId)) {
+      return res.status(403).json({ message: 'You are not a member of this group' });
+    }
     next();
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Internal server error',
-      error: error.message,
-    });
+    res.status(500).json({ message: 'Error validating group membership', error });
   }
 }
+
+// ========== User Authentication ==========
 
 // Register a new user
 app.post('/register', async (req, res) => {
   const { username, password } = req.body;
-
   try {
-    // Check if the username already exists
     const existingUser = await User.findOne({ username });
     if (existingUser) {
       return res.status(400).json({ message: 'Username already exists' });
     }
-
-    // Hash the password and save the user
     const hashedPassword = await bcrypt.hash(password, 10);
     const newUser = new User({ username, password: hashedPassword });
     await newUser.save();
-
     res.status(201).json({ message: 'User registered successfully' });
   } catch (error) {
     res.status(500).json({ message: 'Error registering user', error });
@@ -76,50 +66,39 @@ app.post('/register', async (req, res) => {
 // User login
 app.post('/login', async (req, res) => {
   const { username, password } = req.body;
-
   try {
-    // Check if the user exists
     const user = await User.findOne({ username });
     if (!user) {
       return res.status(400).json({ message: 'Invalid username or password' });
     }
-
-    // Validate password
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
       return res.status(400).json({ message: 'Invalid username or password' });
     }
-
     res.status(200).json({ message: 'Login successful', username });
   } catch (error) {
     res.status(500).json({ message: 'Error logging in', error });
   }
 });
 
+// ========== Friend Management ==========
+
 // Add a friend
 app.post('/add-friend', async (req, res) => {
   const { username, friendUsername } = req.body;
-
   try {
-    // Find both users
     const user = await User.findOne({ username });
     const friend = await User.findOne({ username: friendUsername });
-
     if (!user || !friend) {
       return res.status(404).json({ message: 'User or friend not found' });
     }
-
-    // Check if already friends
     if (user.friends.includes(friend._id)) {
       return res.status(400).json({ message: 'Already friends' });
     }
-
-    // Add each other as friends
     user.friends.push(friend._id);
     friend.friends.push(user._id);
     await user.save();
     await friend.save();
-
     res.status(200).json({ message: 'Friend added successfully' });
   } catch (error) {
     res.status(500).json({ message: 'Error adding friend', error });
@@ -129,180 +108,93 @@ app.post('/add-friend', async (req, res) => {
 // Get user's friends
 app.get('/friends/:username', async (req, res) => {
   const { username } = req.params;
-
   try {
     const user = await User.findOne({ username }).populate('friends', 'username');
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
-
     res.json(user.friends);
   } catch (error) {
     res.status(500).json({ message: 'Error fetching friends', error });
   }
 });
 
-// Fetch messages between friends
-app.get('/messages/:user1/:user2', async (req, res) => {
-  const { user1, user2 } = req.params;
+// ========== Group Chat Functionality ==========
 
+// Create a new group
+app.post('/groups', async (req, res) => {
+  const { name, admin, members } = req.body;
   try {
-    const messages = await Message.find({
-      $or: [
-        { sender: user1, receiver: user2 },
-        { sender: user2, receiver: user1 },
-      ],
-    }).sort({ timestamp: 1 });
-
-    res.json(messages);
+    const group = new Group({ name, admin, members });
+    await group.save();
+    res.status(201).json({ message: 'Group created successfully', group });
   } catch (error) {
-    res.status(500).json({ message: 'Error fetching messages', error });
+    res.status(500).json({ message: 'Error creating group', error });
   }
 });
 
-// Send a message to a friend
-app.post('/message', async (req, res) => {
-  const { sender, receiver, content } = req.body;
-
+// Fetch all groups for a user
+app.get('/groups/:username', async (req, res) => {
+  const { username } = req.params;
   try {
-    // Check if sender and receiver are friends
-    const user = await User.findOne({ username: sender }).populate('friends', 'username');
-    const isFriend = user.friends.some((friend) => friend.username === receiver);
+    const userGroups = await Group.find({ members: username }).populate('members', 'username');
+    res.json(userGroups);
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching groups', error });
+  }
+});
 
-    if (!isFriend) {
-      return res.status(403).json({ message: 'You can only message your friends' });
-    }
+// Fetch messages for a specific group
+app.get('/groups/:groupId/messages', validateGroupMembership, async (req, res) => {
+  const { groupId } = req.params;
+  try {
+    const messages = await Message.find({ group: groupId }).sort({ timestamp: 1 });
+    res.json(messages);
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching group messages', error });
+  }
+});
 
-    // Save the message
-    const newMessage = new Message({ sender, receiver, content });
-    await newMessage.save();
-
-    res.status(201).json({ message: 'Message sent successfully' });
+// Send a message to a group
+app.post('/groups/:groupId/messages', validateGroupMembership, async (req, res) => {
+  const { groupId } = req.params;
+  const { sender, content } = req.body;
+  try {
+    const message = new Message({ sender, group: groupId, content });
+    await message.save();
+    res.status(201).json({ message: 'Message sent to group successfully', message });
   } catch (error) {
     res.status(500).json({ message: 'Error sending message', error });
   }
 });
 
-// Get user's bio
-app.get('/user/:username/bio', findUserByUsername, (req, res) => {
-  res.status(200).json({
-    success: true,
-    bio: req.user.bio || '',
-  });
-});
+// ========== Real-Time Messaging with Socket.IO ==========
 
-// Update user's bio
-app.put('/user/:username/bio', findUserByUsername, async (req, res) => {
-  const { bio } = req.body;
-
-  try {
-    req.user.bio = bio;
-    await req.user.save();
-
-    res.status(200).json({
-      success: true,
-      message: 'Bio updated successfully',
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Failed to update bio',
-      error: error.message,
-    });
-  }
-});
-
-// Get user's nickname
-app.get('/user/:username/nickname', findUserByUsername, (req, res) => {
-  res.status(200).json({
-    success: true,
-    nickname: req.user.nickname || '',
-  });
-});
-
-// Update user's nickname
-app.put('/user/:username/nickname', findUserByUsername, async (req, res) => {
-  const { nickname } = req.body;
-
-  try {
-    req.user.nickname = nickname;
-    await req.user.save();
-
-    res.status(200).json({
-      success: true,
-      message: 'Nickname updated successfully',
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Failed to update nickname',
-      error: error.message,
-    });
-  }
-});
-
-// Add a post
-app.post('/post', async (req, res) => {
-  const { username, content } = req.body;
-
-  try {
-    console.log(`Saving post for user ${username}: ${content}`);
-    const post = new Post({ username, content });
-    await post.save();
-    res.status(201).json({ message: 'Post added successfully' });
-  } catch (error) {
-    console.error('Error adding post:', error);
-    res.status(500).json({ message: 'Error adding post', error });
-  }
-});
-
-// Get posts from friends and the user
-app.get('/posts/:username', async (req, res) => {
-  const { username } = req.params;
-
-  try {
-    // Find the user and populate friends
-    const user = await User.findOne({ username }).populate('friends', 'username');
-    if (!user) {
-      return res.status(404).json({ message: 'User not found' });
-    }
-
-    // Get usernames of friends and include the user's own username
-    const friendUsernames = user.friends.map(friend => friend.username);
-    friendUsernames.push(username); // Include the user's own posts
-
-    // Find posts by the user and their friends
-    const posts = await Post.find({ username: { $in: friendUsernames } }).sort({ createdAt: -1 });
-
-    res.json(posts);
-  } catch (error) {
-    console.error('Error fetching posts:', error);
-    res.status(500).json({ message: 'Error fetching posts', error });
-  }
-});
-
-// Socket.IO for Real-Time Chat
 io.on('connection', (socket) => {
   console.log('New client connected:', socket.id);
 
-  // Listen for messages
-  socket.on('sendMessage', async (messageData) => {
+  // Listen for group messages
+  socket.on('sendGroupMessage', async (messageData) => {
+    const { groupId, sender, content } = messageData;
     try {
-      const message = new Message(messageData);
+      const group = await Group.findById(groupId);
+      if (!group.members.includes(sender)) {
+        console.error('User not a member of the group');
+        return;
+      }
+      const message = new Message({ sender, group: groupId, content });
       await message.save();
-      io.emit('receiveMessage', messageData);
+      io.emit(`groupMessage:${groupId}`, message);
     } catch (error) {
-      console.error('Error saving message:', error);
+      console.error('Error sending group message:', error);
     }
   });
 
-  // Handle disconnection
   socket.on('disconnect', () => {
     console.log('Client disconnected:', socket.id);
   });
 });
 
-// Start Server
+// ========== Start the Server ==========
 const PORT = process.env.PORT || 5003;
 server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
-
