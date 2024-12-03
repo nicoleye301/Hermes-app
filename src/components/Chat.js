@@ -13,7 +13,7 @@ function Chat() {
   const [userProfilePicture, setUserProfilePicture] = useState('');
   const username = localStorage.getItem('username');
 
-  // Fetch logged-in user's profile picture on load
+// Fetch logged-in user's profile picture on load
   useEffect(() => {
     const fetchUserProfile = async () => {
       try {
@@ -26,7 +26,7 @@ function Chat() {
     fetchUserProfile();
   }, [username]);
 
-  // Fetch friend list on load
+// Fetch friend list on load
   useEffect(() => {
     const fetchFriends = async () => {
       try {
@@ -39,7 +39,7 @@ function Chat() {
     fetchFriends();
   }, [username]);
 
-  // Fetch chat history when a friend is selected
+// Fetch chat history when a friend is selected
   useEffect(() => {
     if (selectedFriend) {
       const fetchMessages = async () => {
@@ -54,22 +54,23 @@ function Chat() {
     }
   }, [selectedFriend, username]);
 
-  // Handle new messages from Socket.IO
-  useEffect(() => {
-    socket.on('receiveMessage', (newMessage) => {
-      if (
-        (newMessage.sender === username && newMessage.receiver === selectedFriend) ||
-        (newMessage.sender === selectedFriend && newMessage.receiver === username)
-      ) {
-        setMessages((prevMessages) => [...prevMessages, newMessage]);
-      }
-    });
+// Handle new messages from Socket.IO
+useEffect(() => {
+  socket.on('receiveMessage', (newMessage) => {
+    if (
+      (newMessage.sender === username && newMessage.receiver === selectedFriend) ||
+      (newMessage.sender === selectedFriend && newMessage.receiver === username)
+    ) {
+      setMessages((prevMessages) => [...prevMessages, newMessage]);
+    }
+  });
 
-    return () => socket.off('receiveMessage');
-  }, [selectedFriend, username]);
+  return () => socket.off('receiveMessage');
+}, [selectedFriend, username]);
 
 
-  // Send message
+
+// Send message
 const sendMessage = () => {
   if (message && selectedFriend) {
     const messageData = {
