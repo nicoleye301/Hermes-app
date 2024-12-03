@@ -1,3 +1,5 @@
+
+
 .app-container {
   display: flex;
   height: 100vh;
@@ -12,28 +14,10 @@
   flex-grow: 1;
   overflow-y: auto;
   padding: 20px;
+  background-color: #36393f;
+  color: #ffffff;
 }
 
 .logged-in {
-  margin-left: 80px; /* Leaves space for the sidebar */
+  margin-left: 80px; /* Adjust for sidebar width */
 }
-
-/* App.css */
-.app-container {
-  display: flex;
-  height: 100vh;
-}
-
-.sidebar {
-  width: 80px; /* Sidebar width */
-  flex-shrink: 0;
-}
-
-.content-container {
-  flex-grow: 1;
-  padding: 20px;
-  background-color: #36393f; /* Match chat theme background */
-  color: #ffffff;
-  overflow-y: auto;
-}
-

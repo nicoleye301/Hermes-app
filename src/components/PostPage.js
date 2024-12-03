@@ -2,11 +2,12 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 
 const port = 5003;
-const baseURL = `http://localhost:${port}`; 
+const baseURL = `http://localhost:${port}`;
 
 function PostPage() {
   const [posts, setPosts] = useState([]);
   const [newPost, setNewPost] = useState('');
+  const [profilePicture, setProfilePicture] = useState('/uploads/profile-pictures/default.jpg');
   const username = localStorage.getItem('username');
 
   // Fetch posts from friends when the component mounts
@@ -14,40 +15,53 @@ function PostPage() {
     const fetchPosts = async () => {
       try {
         const response = await axios.get(`${baseURL}/posts/${username}`);
-        setPosts(response.data); // Set posts in state
+        if (response.status === 200) {
+          setPosts(response.data); // Set posts in state
+        } else {
+          console.error('Failed to fetch posts: ', response);
+        }
       } catch (error) {
         console.error('Error fetching posts:', error);
       }
     };
-    fetchPosts();
+
+    const fetchUserProfile = async () => {
+      try {
+        const response = await axios.get(`${baseURL}/user/${username}`);
+        if (response.status === 200) {
+          setProfilePicture(response.data.profilePicture);
+        }
+      } catch (error) {
+        console.error('Error fetching user profile:', error);
+      }
+    };
+
+    if (username) {
+      fetchPosts(); // Fetch posts if username is available
+      fetchUserProfile(); // Fetch profile picture if username is available
+    }
   }, [username]);
 
   // Handle adding a new post
   const handleAddPost = async () => {
-    if (newPost) {
+    if (newPost.trim() !== '') {
       try {
-        await axios.post(`${baseURL}/post`, { username, content: newPost });
-  
-        // Fetch the user's updated profile data to get the latest profile picture
-        const userResponse = await axios.get(`${baseURL}/user/${username}`);
-  
+        const response = await axios.post(`${baseURL}/post`, { username, content: newPost });
+        const newPostData = {
+          username,
+          content: newPost,
+          createdAt: new Date(),
+          profilePicture: profilePicture, // Use the current profile picture
+        };
+
         // Add the new post at the top of the list
-        setPosts([
-          {
-            username,
-            content: newPost,
-            createdAt: new Date(),
-            profilePicture: userResponse.data.profilePicture,
-          },
-          ...posts,
-        ]);
+        setPosts((prevPosts) => [newPostData, ...prevPosts]);
         setNewPost(''); // Clear input
       } catch (error) {
         console.error('Error adding post:', error);
       }
     }
   };
-  
 
   return (
     <div style={styles.container}>
@@ -58,14 +72,16 @@ function PostPage() {
           onChange={(e) => setNewPost(e.target.value)}
           style={styles.textarea}
         />
-        <button onClick={handleAddPost} style={styles.button}>Post</button>
+        <button onClick={handleAddPost} style={styles.button}>
+          Post
+        </button>
       </div>
       <div style={styles.postsContainer}>
         {posts.map((post, index) => (
           <div key={index} style={styles.post}>
             <div style={styles.postHeader}>
               <img
-                src={`http://localhost:${port}${post.profilePicture}`}
+                src={`http://localhost:${port}${post.profilePicture || '/uploads/profile-pictures/default.jpg'}`}
                 alt="Profile"
                 style={styles.postProfilePicture}
               />

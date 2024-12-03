@@ -6,6 +6,7 @@ const cors = require('cors');
 const bcrypt = require('bcryptjs');
 const multer = require('multer');
 const path = require('path');
+const fs = require('fs');
 
 // Import Models
 const User = require('./models/User'); // User model
@@ -26,7 +27,8 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 mongoose.connect('mongodb+srv://nicoleye301:XgHVNsrpmFTh2ZV6@cluster0.05bnf.mongodb.net/hermes-chat', {
   useNewUrlParser: true,
   useUnifiedTopology: true,
-}).then(() => console.log('Connected to MongoDB'))
+})
+  .then(() => console.log('Connected to MongoDB'))
   .catch((err) => console.error('MongoDB connection error:', err));
 
 // Middleware to find user by username
@@ -67,7 +69,6 @@ const storage = multer.diskStorage({
 const upload = multer({ storage });
 
 // Ensure Directory Exists
-const fs = require('fs');
 const uploadDir = path.join(__dirname, 'uploads/profile-pictures');
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
@@ -253,6 +254,93 @@ app.put('/user/:username/bio', findUserByUsername, async (req, res) => {
   }
 });
 
+// Get user's nickname
+app.get('/user/:username/nickname', findUserByUsername, (req, res) => {
+  res.status(200).json({
+    success: true,
+    nickname: req.user.nickname || '',
+  });
+});
+
+// Update user's nickname
+app.put('/user/:username/nickname', findUserByUsername, async (req, res) => {
+  const { nickname } = req.body;
+
+  try {
+    req.user.nickname = nickname;
+    await req.user.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Nickname updated successfully',
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update nickname',
+      error: error.message,
+    });
+  }
+});
+
+// Add a post
+app.post('/post', async (req, res) => {
+  const { username, content } = req.body;
+
+  try {
+    console.log(`Saving post for user ${username}: ${content}`);
+    const post = new Post({ username, content });
+    await post.save();
+    res.status(201).json({ message: 'Post added successfully' });
+  } catch (error) {
+    console.error('Error adding post:', error);
+    res.status(500).json({ message: 'Error adding post', error });
+  }
+});
+
+// Get posts from friends and the user with profile pic
+app.get('/posts/:username', async (req, res) => {
+  const { username } = req.params;
+
+  try {
+    // Find the user and populate friends
+    const user = await User.findOne({ username }).populate('friends', 'username');
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Get usernames of friends and include the user's own username
+    const friendUsernames = user.friends.map(friend => friend.username);
+    friendUsernames.push(username); // Include the user's own posts
+
+    // Find posts by the user and their friends
+    const posts = await Post.find({ username: { $in: friendUsernames } }).sort({ createdAt: -1 });
+
+    // Get user profile pictures for each post
+    const users = await User.find({
+      username: { $in: friendUsernames }
+    });
+
+    const userMap = {};
+    users.forEach(user => {
+      userMap[user.username] = {
+        profilePicture: user.profilePicture
+      };
+    });
+
+    // Attach profile pictures to posts
+    const postsWithProfilePics = posts.map(post => ({
+      ...post.toObject(),
+      profilePicture: userMap[post.username]?.profilePicture || '/uploads/profile-pictures/default.jpg'
+    }));
+
+    res.json(postsWithProfilePics);
+  } catch (error) {
+    console.error('Error fetching posts:', error);
+    res.status(500).json({ message: 'Error fetching posts', error });
+  }
+});
+
 // Update User's Profile Picture
 app.put('/user/:username/profile-picture', upload.single('profilePicture'), async (req, res) => {
   try {
@@ -326,9 +414,9 @@ io.on('connection', (socket) => {
         timestamp: newMessage.timestamp,
       };
 
-      // Emit the message to both the sender and the receiver
-      socket.to(receiverUser.socketId).emit('receiveMessage', messageWithProfilePictures);
-      socket.emit('receiveMessage', messageWithProfilePictures);
+      // Emit the message only to the intended receiver and the sender
+      socket.emit('receiveMessage', messageWithProfilePictures); // Emit to sender
+      socket.broadcast.emit('receiveMessage', messageWithProfilePictures); // Emit to receiver
     } catch (error) {
       console.error('Error saving message:', error);
     }

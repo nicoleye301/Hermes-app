@@ -10,36 +10,23 @@ import Profile from './components/Profile';
 import './App.css';
 
 function App() {
-  // Check if the user is logged in
-  const isLoggedIn = !!localStorage.getItem('username');
+  const isLoggedIn = !!localStorage.getItem('username'); // Check if user is logged in
 
   return (
     <Router>
       <div className="app-container">
-        
-        {isLoggedIn && <div className="sidebar"><Sidebar /></div>}
-        
-        
+        {/* Sidebar is visible only if the user is logged in */}
+        {isLoggedIn && <Sidebar />}
+
         <div className={`content-container ${isLoggedIn ? 'logged-in' : ''}`}>
           <Routes>
             <Route path="/" element={<Navigate to={isLoggedIn ? "/chat" : "/login"} />} />
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
-            {isLoggedIn ? (
-              <>
-                <Route path="/chat" element={<Chat />} />
-                <Route path="/friends" element={<FriendList />} />
-                <Route path="/profile" element={<Profile />} />
-                <Route path="/posts" element={<PostPage />} />
-              </>
-            ) : (
-              <>
-                <Route path="/chat" element={<Navigate to="/login" />} />
-                <Route path="/friends" element={<Navigate to="/login" />} />
-                <Route path="/profile" element={<Navigate to="/login" />} />
-                <Route path="/posts" element={<Navigate to="/login" />} />
-              </>
-            )}
+            <Route path="/chat" element={<Chat />} />
+            <Route path="/friends" element={<FriendList />} />
+            <Route path="/profile" element={<Profile />} />
+            <Route path="/posts" element={<PostPage />} />
           </Routes>
         </div>
       </div>

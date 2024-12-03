@@ -7,38 +7,29 @@ function Sidebar() {
   const navigate = useNavigate();
 
   const handleLogout = () => {
-    localStorage.removeItem('username'); // Clear user data from local storage
+    localStorage.removeItem('username'); // Clear user data
     navigate('/login'); // Redirect to login page after logout
   };
 
-  const isLoggedIn = !!localStorage.getItem('username'); // Check if the user is logged in
+  const isLoggedIn = !!localStorage.getItem('username'); // Check if user is logged in
 
   return (
     <div style={styles.sidebar}>
       <div style={styles.iconContainer}>
         {isLoggedIn && (
           <>
-            {/* Chat link */}
             <Link to="/chat" className="d-block p-3 link-light text-decoration-none" title="Chat">
               <i className="bi-chat-dots" style={styles.icon}></i>
             </Link>
-
-            {/* Friends link */}
             <Link to="/friends" className="d-block p-3 link-light text-decoration-none" title="Friends">
               <i className="bi-people" style={styles.icon}></i>
             </Link>
-
-            {/* Profile link */}
             <Link to="/profile" className="d-block p-3 link-light text-decoration-none" title="Profile">
               <i className="bi-person-circle" style={styles.icon}></i>
             </Link>
-
-            {/* Posts link */}
             <Link to="/posts" className="d-block p-3 link-light text-decoration-none" title="Posts">
               <i className="bi-card-text" style={styles.icon}></i>
             </Link>
-
-            {/* Logout button */}
             <button onClick={handleLogout} className="d-block p-3 link-light text-decoration-none border-0 bg-transparent" title="Logout" style={styles.logoutButton}>
               <i className="bi-box-arrow-right" style={styles.icon}></i>
             </button>
@@ -56,7 +47,7 @@ const styles = {
     left: 0,
     height: '100vh',
     width: '80px',
-    backgroundColor: '#2c2f33', // Sidebar background color
+    backgroundColor: '#2c2f33',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -73,7 +64,7 @@ const styles = {
   },
   icon: {
     fontSize: '28px',
-    color: '#7289da', // Icon color
+    color: '#7289da',
   },
   logoutButton: {
     marginTop: 'auto',
