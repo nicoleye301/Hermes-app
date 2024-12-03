@@ -142,7 +142,7 @@ app.get('/friends/:username', async (req, res) => {
   }
 });
 
-// Fetch messages between friends with profile pictures
+// Fetch messages between friends
 app.get('/messages/:user1/:user2', async (req, res) => {
   const { user1, user2 } = req.params;
 
@@ -178,7 +178,6 @@ app.get('/messages/:user1/:user2', async (req, res) => {
     res.status(500).json({ message: 'Error creating group', error });
   }
 });
-
 
 // Fetch all groups for a user
 app.get('/groups/:username', async (req, res) => {
