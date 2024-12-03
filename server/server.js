@@ -24,6 +24,30 @@ mongoose.connect('mongodb+srv://nicoleye301:XgHVNsrpmFTh2ZV6@cluster0.05bnf.mong
   useUnifiedTopology: true,
 });
 
+// Middleware to find user by username
+async function findUserByUsername(req, res, next) {
+  const { username } = req.params;
+
+  try {
+    const user = await User.findOne({ username });
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    req.user = user;
+    next();
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error',
+      error: error.message,
+    });
+  }
+}
+
 // Register a new user
 app.post('/register', async (req, res) => {
   const { username, password } = req.body;
@@ -133,7 +157,6 @@ app.get('/messages/:user1/:user2', async (req, res) => {
   }
 });
 
-
 // Send a message to a friend
 app.post('/message', async (req, res) => {
   const { sender, receiver, content } = req.body;
@@ -154,6 +177,64 @@ app.post('/message', async (req, res) => {
     res.status(201).json({ message: 'Message sent successfully' });
   } catch (error) {
     res.status(500).json({ message: 'Error sending message', error });
+  }
+});
+
+// Get user's bio
+app.get('/user/:username/bio', findUserByUsername, (req, res) => {
+  res.status(200).json({
+    success: true,
+    bio: req.user.bio || '',
+  });
+});
+
+// Update user's bio
+app.put('/user/:username/bio', findUserByUsername, async (req, res) => {
+  const { bio } = req.body;
+
+  try {
+    req.user.bio = bio;
+    await req.user.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Bio updated successfully',
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update bio',
+      error: error.message,
+    });
+  }
+});
+
+// Get user's nickname
+app.get('/user/:username/nickname', findUserByUsername, (req, res) => {
+  res.status(200).json({
+    success: true,
+    nickname: req.user.nickname || '',
+  });
+});
+
+// Update user's nickname
+app.put('/user/:username/nickname', findUserByUsername, async (req, res) => {
+  const { nickname } = req.body;
+
+  try {
+    req.user.nickname = nickname;
+    await req.user.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Nickname updated successfully',
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update nickname',
+      error: error.message,
+    });
   }
 });
 

@@ -11,52 +11,59 @@ function Sidebar() {
     navigate('/login'); // Redirect to login page
   };
 
-  const isLoggedIn = !!localStorage.getItem('username');
+  const isLoggedIn = !!localStorage.getItem('username'); // Check if user is logged in
 
   return (
-    <div className="col-sm-auto bg-light sticky-top">
-      <div className="d-flex flex-sm-column flex-row flex-nowrap bg-light align-items-center sticky-top">
-        {/* Logo here later */}
-        <Link to="/" className="d-block p-3 link-dark text-decoration-none" title="Hermes" data-bs-toggle="tooltip" data-bs-placement="right">
-          <i className="bi-bootstrap fs-1"></i> {/* Replace with a Hermes logo if available */}
+    <div style={styles.sidebar}>
+      <div style={styles.iconContainer}>
+        <Link to="/chat" className="d-block p-3 link-light text-decoration-none" title="Chat">
+          <i className="bi-chat-dots" style={styles.icon}></i>
         </Link>
-
-        {/* Navigation Links */}
-        <ul className="nav nav-pills nav-flush flex-sm-column flex-row flex-nowrap mb-auto mx-auto text-center align-items-center">
-          <li className="nav-item">
-            <Link to="/chat" className="nav-link py-3 px-2" title="Chat" data-bs-toggle="tooltip" data-bs-placement="right">
-              <i className="bi-chat-dots fs-1"></i>
-            </Link>
-          </li>
-          <li>
-            <Link to="/friends" className="nav-link py-3 px-2" title="Friends" data-bs-toggle="tooltip" data-bs-placement="right">
-              <i className="bi-people fs-1"></i>
-            </Link>
-          </li>
-          <li>
-            <Link to="/settings" className="nav-link py-3 px-2" title="Settings" data-bs-toggle="tooltip" data-bs-placement="right">
-              <i className="bi-gear fs-1"></i>
-            </Link>
-          </li>
-        </ul>
-
-        {/* User Menu */}
-        {isLoggedIn && (
-          <div className="dropdown mt-3">
-            <a href="#" className="d-flex align-items-center justify-content-center p-3 link-dark text-decoration-none dropdown-toggle" id="dropdownUser3" data-bs-toggle="dropdown" aria-expanded="false">
-              <i className="bi-person-circle h2"></i>
-            </a>
-            <ul className="dropdown-menu text-small shadow" aria-labelledby="dropdownUser3">
-              <li><a className="dropdown-item" href="#">Profile</a></li>
-              <li><a className="dropdown-item" href="#">Settings</a></li>
-              <li><hr className="dropdown-divider" /></li>
-              <li><button className="dropdown-item" onClick={handleLogout}>Logout</button></li>
-            </ul>
-          </div>
-        )}
+        <Link to="/friends" className="d-block p-3 link-light text-decoration-none" title="Friends">
+          <i className="bi-people" style={styles.icon}></i>
+        </Link>
+        <Link to="/profile" className="d-block p-3 link-light text-decoration-none" title="Profile">
+          <i className="bi-person-circle" style={styles.icon}></i>
+        </Link>
+        <button onClick={handleLogout} className="d-block p-3 link-light text-decoration-none border-0 bg-transparent" title="Logout" style={styles.logoutButton}>
+          <i className="bi-box-arrow-right" style={styles.icon}></i>
+        </button>
       </div>
     </div>
   );
 }
+
+const styles = {
+  sidebar: {
+    position: 'fixed',
+    top: 0,
+    left: 0,
+    height: '100vh', // Full viewport height
+    width: '80px', // Sidebar width
+    backgroundColor: '#2c2f33', // Dark color matching chat theme
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    flexDirection: 'column',
+    padding: '10px 0',
+    boxShadow: '2px 0 5px rgba(0, 0, 0, 0.2)',
+    zIndex: 100,
+  },
+  iconContainer: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    width: '100%',
+  },
+  icon: {
+    fontSize: '28px',
+    color: '#7289da', // Blueish color for icons
+  },
+  logoutButton: {
+    marginTop: 'auto',
+    outline: 'none',
+    cursor: 'pointer',
+  },
+};
 
 export default Sidebar;

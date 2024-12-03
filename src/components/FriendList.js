@@ -60,9 +60,9 @@ function FriendList() {
         <button type="submit" style={styles.button}>Add Friend</button>
       </form>
       <h2>Your Friends:</h2>
-      <ul>
+      <ul style={styles.friendList}>
         {friends.map((friend) => (
-          <li key={friend._id}>{friend.username}</li>
+          <li key={friend._id} style={styles.friendItem}>{friend.username}</li>
         ))}
       </ul>
     </div>
@@ -78,7 +78,8 @@ const styles = {
     padding: '20px',
     boxShadow: '0 4px 8px rgba(0, 0, 0, 0.2)',
     borderRadius: '8px',
-    backgroundColor: '#f9f9f9',
+    backgroundColor: '#2c2f33', 
+    color: '#ffffff',
   },
   form: {
     display: 'flex',
@@ -88,17 +89,31 @@ const styles = {
     margin: '10px 0',
     padding: '10px',
     fontSize: '16px',
-    border: '1px solid #ccc',
+    border: '1px solid #42454a',
     borderRadius: '4px',
+    backgroundColor: '#40444b',
+    color: '#ffffff',
   },
   button: {
     padding: '10px',
     fontSize: '16px',
-    backgroundColor: '#007bff',
+    backgroundColor: '#7289da',
     color: 'white',
     border: 'none',
     borderRadius: '4px',
     cursor: 'pointer',
+  },
+  friendList: {
+    listStyle: 'none',
+    padding: 0,
+    marginTop: '20px',
+  },
+  friendItem: {
+    padding: '10px',
+    backgroundColor: '#36393f',
+    margin: '5px 0',
+    borderRadius: '4px',
+    color: '#ffffff',
   },
   error: {
     color: 'red',
