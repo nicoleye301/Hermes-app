@@ -80,7 +80,8 @@ const styles = {
     padding: '20px',
     boxShadow: '0 4px 8px rgba(0, 0, 0, 0.2)',
     borderRadius: '8px',
-    backgroundColor: '#f9f9f9',
+    backgroundColor: '#2c2f33',
+    color: '#ffffff',
   },
   form: {
     display: 'flex',
@@ -90,13 +91,15 @@ const styles = {
     margin: '10px 0',
     padding: '10px',
     fontSize: '16px',
-    border: '1px solid #ccc',
+    border: '1px solid #42454a',
     borderRadius: '4px',
+    backgroundColor: '#40444b',
+    color: '#ffffff',
   },
   button: {
     padding: '10px',
     fontSize: '16px',
-    backgroundColor: '#007bff',
+    backgroundColor: '#7289da',
     color: 'white',
     border: 'none',
     borderRadius: '4px',
@@ -108,7 +111,7 @@ const styles = {
     marginBottom: '10px',
   },
   link: {
-    color: '#007bff',
+    color: '#7289da',
     cursor: 'pointer',
   },
 };
