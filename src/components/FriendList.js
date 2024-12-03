@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+
 const port = 5003;
 
 function FriendList() {
@@ -62,7 +63,14 @@ function FriendList() {
       <h2>Your Friends:</h2>
       <ul style={styles.friendList}>
         {friends.map((friend) => (
-          <li key={friend._id} style={styles.friendItem}>{friend.username}</li>
+          <li key={friend._id} style={styles.friendItem}>
+            <img
+              src={`http://localhost:${port}${friend.profilePicture}`}
+              alt="Profile"
+              style={styles.profilePicture}
+            />
+            {friend.username}
+          </li>
         ))}
       </ul>
     </div>
@@ -113,7 +121,15 @@ const styles = {
     backgroundColor: '#36393f',
     margin: '5px 0',
     borderRadius: '4px',
+    display: 'flex',
+    alignItems: 'center',
     color: '#ffffff',
+  },
+  profilePicture: {
+    width: '30px',
+    height: '30px',
+    borderRadius: '50%',
+    marginRight: '10px',
   },
   error: {
     color: 'red',

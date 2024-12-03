@@ -3,7 +3,6 @@ import io from 'socket.io-client';
 import axios from 'axios';
 
 const port = 5003;
-
 const socket = io(`http://localhost:${port}`);
 
 function Chat() {
@@ -11,7 +10,21 @@ function Chat() {
   const [selectedFriend, setSelectedFriend] = useState(null);
   const [messages, setMessages] = useState([]);
   const [message, setMessage] = useState('');
+  const [userProfilePicture, setUserProfilePicture] = useState('');
   const username = localStorage.getItem('username');
+
+  // Fetch logged-in user's profile picture on load
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      try {
+        const response = await axios.get(`http://localhost:${port}/user/${username}`);
+        setUserProfilePicture(response.data.profilePicture);
+      } catch (error) {
+        console.error('Error fetching user profile picture:', error);
+      }
+    };
+    fetchUserProfile();
+  }, [username]);
 
   // Fetch friend list on load
   useEffect(() => {
@@ -51,22 +64,29 @@ function Chat() {
         setMessages((prevMessages) => [...prevMessages, newMessage]);
       }
     });
-  
+
     return () => socket.off('receiveMessage');
   }, [selectedFriend, username]);
-  
+
 
   // Send message
-  const sendMessage = () => {
-    if (message && selectedFriend) {
-      const messageData = { sender: username, receiver: selectedFriend, content: message };
+const sendMessage = () => {
+  if (message && selectedFriend) {
+    const messageData = {
+      sender: username,
+      receiver: selectedFriend,
+      content: message,
+      senderProfilePicture: userProfilePicture,
+    };
 
-      socket.emit('sendMessage', messageData);
+    // Emit the message through Socket.IO
+    socket.emit('sendMessage', messageData);
 
-      setMessage('');
-    }
-  };
-  
+    // Clear the input field
+    setMessage('');
+  }
+};
+
 
   return (
     <div style={styles.container}>
@@ -79,6 +99,11 @@ function Chat() {
               style={styles.friendItem(selectedFriend === friend.username)}
               onClick={() => setSelectedFriend(friend.username)}
             >
+              <img
+                src={`http://localhost:${port}${friend.profilePicture}`}
+                alt="Profile"
+                style={styles.profilePicture}
+              />
               {friend.username}
             </li>
           ))}
@@ -90,9 +115,18 @@ function Chat() {
             <h2>Chat with {selectedFriend}</h2>
             <div style={styles.messages}>
               {messages.map((msg, index) => (
-                <p key={index} style={msg.sender === username ? styles.sentMessage : styles.receivedMessage}>
-                  <strong>{msg.sender}:</strong> {msg.content}
-                </p>
+                <div
+                  key={index}
+                  style={msg.sender === username ? styles.sentMessageContainer : styles.receivedMessageContainer}>
+                  <img
+                    src={`http://localhost:${port}${msg.senderProfilePicture}`}
+                    alt="Profile"
+                    style={styles.messageProfilePicture}
+                  />
+                  <p style={msg.sender === username ? styles.sentMessage : styles.receivedMessage}>
+                    <strong>{msg.sender}:</strong> {msg.content}
+                  </p>
+                </div>
               ))}
             </div>
             <input
@@ -118,17 +152,16 @@ const styles = {
   container: {
     display: 'flex',
     height: '95vh',
-    paddingTop: '0px',
   },
   sidebar: {
     width: '20%',
     backgroundColor: '#2c2f33',
-    padding: '80px',
+    padding: '20px',
     color: '#ffffff',
     overflowY: 'auto',
   },
   chatWindow: {
-    width: '75%',
+    width: '80%',
     padding: '10px',
     backgroundColor: '#36393f',
     color: '#ffffff',
@@ -148,7 +181,15 @@ const styles = {
     marginBottom: '5px',
     borderRadius: '4px',
     transition: 'all 0.2s ease-in-out',
+    display: 'flex',
+    alignItems: 'center',
   }),
+  profilePicture: {
+    width: '30px',
+    height: '30px',
+    borderRadius: '50%',
+    marginRight: '10px',
+  },
   messages: {
     flexGrow: 1,
     overflowY: 'scroll',
@@ -157,6 +198,24 @@ const styles = {
     padding: '10px',
     backgroundColor: '#2c2f33',
     borderRadius: '8px',
+  },
+  sentMessageContainer: {
+    display: 'flex',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    marginBottom: '10px',
+  },
+  receivedMessageContainer: {
+    display: 'flex',
+    justifyContent: 'flex-start',
+    alignItems: 'center',
+    marginBottom: '10px',
+  },
+  messageProfilePicture: {
+    width: '30px',
+    height: '30px',
+    borderRadius: '50%',
+    marginRight: '10px',
   },
   sentMessage: {
     textAlign: 'right',

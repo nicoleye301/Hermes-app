@@ -27,13 +27,27 @@ function PostPage() {
     if (newPost) {
       try {
         await axios.post(`${baseURL}/post`, { username, content: newPost });
-        setPosts([{ username, content: newPost, createdAt: new Date() }, ...posts]); // Add the new post at the top
+  
+        // Fetch the user's updated profile data to get the latest profile picture
+        const userResponse = await axios.get(`${baseURL}/user/${username}`);
+  
+        // Add the new post at the top of the list
+        setPosts([
+          {
+            username,
+            content: newPost,
+            createdAt: new Date(),
+            profilePicture: userResponse.data.profilePicture,
+          },
+          ...posts,
+        ]);
         setNewPost(''); // Clear input
       } catch (error) {
         console.error('Error adding post:', error);
       }
     }
   };
+  
 
   return (
     <div style={styles.container}>
@@ -49,7 +63,14 @@ function PostPage() {
       <div style={styles.postsContainer}>
         {posts.map((post, index) => (
           <div key={index} style={styles.post}>
-            <strong>{post.username}</strong>
+            <div style={styles.postHeader}>
+              <img
+                src={`http://localhost:${port}${post.profilePicture}`}
+                alt="Profile"
+                style={styles.postProfilePicture}
+              />
+              <strong>{post.username}</strong>
+            </div>
             <p>{post.content}</p>
             <small>{new Date(post.createdAt).toLocaleString()}</small>
           </div>
@@ -99,6 +120,17 @@ const styles = {
     padding: '20px',
     borderRadius: '10px',
     backgroundColor: '#2c2f33',
+  },
+  postHeader: {
+    display: 'flex',
+    alignItems: 'center',
+    marginBottom: '10px',
+  },
+  postProfilePicture: {
+    width: '40px',
+    height: '40px',
+    borderRadius: '50%',
+    marginRight: '10px',
   },
 };
 
