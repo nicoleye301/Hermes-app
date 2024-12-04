@@ -13,6 +13,7 @@ function Chat({ username }) {
   const [userProfilePicture, setUserProfilePicture] = useState('');
   const [typing, setTyping] = useState(false);
   const [isTyping, setIsTyping] = useState(null);
+  const [notifications, setNotifications] = useState({});
 
   // Reference to the messages container
   const messagesContainerRef = useRef(null);
@@ -50,6 +51,8 @@ function Chat({ username }) {
         try {
           const response = await axios.get(`http://localhost:${port}/messages/${username}/${selectedFriend}`);
           setMessages(response.data);
+          // Reset notifications for the selected friend
+          setNotifications((prev) => ({ ...prev, [selectedFriend]: 0 }));
         } catch (error) {
           console.error('Error fetching messages:', error);
         }
@@ -66,6 +69,22 @@ function Chat({ username }) {
         (newMessage.sender === selectedFriend && newMessage.receiver === username)
       ) {
         setMessages((prevMessages) => [...prevMessages, newMessage]);
+      } else if (newMessage.receiver === username) {
+        // Update notifications for the sender
+        setNotifications((prev) => ({
+          ...prev,
+          [newMessage.sender]: (prev[newMessage.sender] || 0) + 1,
+        }));
+      }
+
+      // Move the friend to the top of the friend list if they sent or received a new message
+      if (newMessage.receiver === username || newMessage.sender === username) {
+        const friendToMove = newMessage.sender === username ? newMessage.receiver : newMessage.sender;
+        setFriends((prevFriends) => {
+          const updatedFriends = prevFriends.filter((friend) => friend.username !== friendToMove);
+          const friendToAdd = prevFriends.find((friend) => friend.username === friendToMove);
+          return [friendToAdd, ...updatedFriends].filter(Boolean); // Ensure friendToAdd exists
+        });
       }
     });
 
@@ -109,6 +128,13 @@ function Chat({ username }) {
 
       // Emit stop typing when sending message
       socket.emit('stopTyping', { sender: username, receiver: selectedFriend });
+
+      // Move selected friend to the top of the friend list
+      setFriends((prevFriends) => {
+        const updatedFriends = prevFriends.filter((friend) => friend.username !== selectedFriend);
+        const friendToAdd = prevFriends.find((friend) => friend.username === selectedFriend);
+        return [friendToAdd, ...updatedFriends].filter(Boolean); // Ensure friendToAdd exists
+      });
     }
   };
 
@@ -135,7 +161,7 @@ function Chat({ username }) {
         <ul style={styles.friendList}>
           {friends.map((friend) => (
             <li
-              key={friend._id}
+              key={friend.username}
               style={styles.friendItem(selectedFriend === friend.username)}
               onClick={() => setSelectedFriend(friend.username)}
             >
@@ -144,7 +170,14 @@ function Chat({ username }) {
                 alt="Profile"
                 style={styles.profilePicture}
               />
-              {friend.username}
+              <div style={styles.friendInfo}>
+                <span>{friend.username}</span>
+                {notifications[friend.username] > 0 && (
+                  <span style={styles.notificationBadge}>
+                    {notifications[friend.username]}
+                  </span>
+                )}
+              </div>
             </li>
           ))}
         </ul>
@@ -166,7 +199,7 @@ function Chat({ username }) {
                       style={styles.messageProfilePicture}
                     />
                     <p style={msg.sender === username ? styles.sentMessage : styles.receivedMessage}>
-                      <strong>{msg.sender}:</strong> {msg.content}
+                      {msg.content}
                     </p>
                   </div>
                 ))}
@@ -231,12 +264,24 @@ const styles = {
     transition: 'all 0.2s ease-in-out',
     display: 'flex',
     alignItems: 'center',
+    position: 'relative',
   }),
   profilePicture: {
     width: '30px',
     height: '30px',
     borderRadius: '50%',
     marginRight: '10px',
+  },
+  notificationBadge: {
+    position: 'absolute',
+    right: '10px',
+    top: '10px',
+    backgroundColor: '#7289da',
+    color: '#ffffff',
+    borderRadius: '50%',
+    padding: '5px 8px',
+    fontSize: '12px',
+    fontWeight: 'bold',
   },
   messagesContainer: {
     flexGrow: 1,
@@ -251,7 +296,7 @@ const styles = {
     display: 'flex',
     flexDirection: 'column',
     gap: '10px',
-    paddingBottom: '10px', 
+    paddingBottom: '20px',
   },
   typingIndicator: {
     fontStyle: 'italic',
