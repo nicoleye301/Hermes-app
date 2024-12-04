@@ -27,6 +27,12 @@ function Sidebar({setCurrentUser}) {
           <Link to="/posts" className="d-block p-3 link-light text-decoration-none" title="Posts">
             <i className="bi-card-text" style={styles.icon}></i>
           </Link>
+
+          {/* Add a link to the settings page. This link is represented in the sidebar with a gear icon. */}
+          <Link to="/settings" className="d-block p-3 link-light text-decoration-none" title="Settings">
+            <i className="bi-gear" style={styles.icon}></i>
+          </Link>
+
           <button onClick={handleLogout} className="d-block p-3 link-light text-decoration-none border-0 bg-transparent" title="Logout" style={styles.logoutButton}>
             <i className="bi-box-arrow-right" style={styles.icon}></i>
           </button>

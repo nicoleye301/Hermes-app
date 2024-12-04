@@ -434,6 +434,36 @@ io.on('connection', (socket) => {
     }
   });
 
+  //Update the user's password.
+  //NOTE: If the user forgets their password, they may not be able to access their account since
+  // you need to log in before you can change your password. MongoDB won't help since the passwords are hashed
+  // in the database.
+  app.put ('/user/:username/password', async (req, res) => {
+    const { username }    = req.params;
+    const { newPassword } = req.body;
+
+    try {
+      //Find the user in the 'users' collection.
+      const user = await User.findOne({ username });
+      if (!user) {
+        return res.status(404).json({ success: false, message: 'User not found' });
+      }
+
+      //Hash the new password provided by the user.
+      const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+      //Update the password stored in the database with the newly created password.
+      user.password = hashedPassword;
+      await user.save();
+
+      //Send a response to the client-endpoint indicating password update success or failure.
+      res.status(200).json({ success: true, message: 'Password updated! Yahoo!' });
+    } catch (error) {
+      console.error('Failed to update user profile:', error);
+      res.status(500).json({ success: false, message: 'Failed to update user profile', error: error.message });
+    }
+  });
+
   // Handle disconnection
   socket.on('disconnect', () => {
     console.log('Client disconnected:', socket.id);

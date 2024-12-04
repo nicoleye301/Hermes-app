@@ -7,6 +7,7 @@ import Chat from './components/Chat';
 import FriendList from './components/FriendList';
 import PostPage from './components/PostPage';
 import Profile from './components/Profile';
+import Settings from './components/Settings';
 import './App.css';
 
 function App() {
@@ -28,6 +29,9 @@ function App() {
             <Route path="/friends" element={<FriendList username={currentUser}/>} />
             <Route path="/profile" element={<Profile username={currentUser}/>} />
             <Route path="/posts" element={<PostPage username={currentUser}/>} />
+
+            {/* New route for the settings page */}
+            <Route path="/settings" element={<Settings username={currentUser}/>} />
           </Routes>
         </div>
       </div>
