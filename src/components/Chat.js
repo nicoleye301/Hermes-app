@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import io from 'socket.io-client';
 import axios from 'axios';
-import {useNavigate} from "react-router-dom";
+import { useNavigate } from "react-router-dom";
+import 'bootstrap-icons/font/bootstrap-icons.css';
 
 const port = 5003;
 const socket = io(`http://localhost:${port}`);
@@ -15,6 +16,7 @@ function Chat({ username }) {
   const [typing, setTyping] = useState(false);
   const [isTyping, setIsTyping] = useState(null);
   const [notifications, setNotifications] = useState({});
+  const [hoveredMessageId, setHoveredMessageId] = useState(null); // Track hovered message
 
   // Reference to the messages container
   const messagesContainerRef = useRef(null);
@@ -73,13 +75,16 @@ function Chat({ username }) {
   // Handle new messages from Socket.IO
   useEffect(() => {
     socket.on('receiveMessage', (newMessage) => {
-      if (
-        (newMessage.sender === username && newMessage.receiver === selectedFriend) ||
-        (newMessage.sender === selectedFriend && newMessage.receiver === username)
-      ) {
-        setMessages((prevMessages) => [...prevMessages, newMessage]);
-      } else if (newMessage.receiver === username) {
-        // Update notifications for the sender
+      // Only add the message if it doesn't already exist in the state
+      setMessages((prevMessages) => {
+        if (!prevMessages.find((msg) => msg._id === newMessage._id)) {
+          return [...prevMessages, newMessage];
+        }
+        return prevMessages;
+      });
+
+      // Update notifications for the sender if it's not the selected friend
+      if (newMessage.receiver === username && newMessage.sender !== selectedFriend) {
         setNotifications((prev) => ({
           ...prev,
           [newMessage.sender]: (prev[newMessage.sender] || 0) + 1,
@@ -134,16 +139,6 @@ function Chat({ username }) {
       // Emit the message through Socket.IO
       socket.emit('sendMessage', messageData);
       setMessage('');
-
-      // Emit stop typing when sending message
-      socket.emit('stopTyping', { sender: username, receiver: selectedFriend });
-
-      // Move selected friend to the top of the friend list
-      setFriends((prevFriends) => {
-        const updatedFriends = prevFriends.filter((friend) => friend.username !== selectedFriend);
-        const friendToAdd = prevFriends.find((friend) => friend.username === selectedFriend);
-        return [friendToAdd, ...updatedFriends].filter(Boolean); // Ensure friendToAdd exists
-      });
     }
   };
 
@@ -161,6 +156,18 @@ function Chat({ username }) {
       setTyping(false);
       socket.emit('stopTyping', { sender: username, receiver: selectedFriend });
     }, 1000);
+  };
+
+  // Delete message
+  const deleteMessage = async (messageId) => {
+    try {
+      await axios.delete(`http://localhost:${port}/message/${messageId}`, {
+        data: { username }, // Pass the username to verify if the sender is deleting
+      });
+      setMessages((prevMessages) => prevMessages.filter((msg) => msg._id !== messageId));
+    } catch (error) {
+      console.error('Error deleting message:', error);
+    }
   };
 
   return (
@@ -197,19 +204,31 @@ function Chat({ username }) {
             <h2>Chat with {selectedFriend}</h2>
             <div style={styles.messagesContainer} ref={messagesContainerRef}>
               <div style={styles.messages}>
-                {messages.map((msg, index) => (
+                {messages.map((msg) => (
                   <div
-                    key={index}
+                    key={msg._id}
                     style={msg.sender === username ? styles.sentMessageContainer : styles.receivedMessageContainer}
+                    onMouseEnter={() => setHoveredMessageId(msg._id)}
+                    onMouseLeave={() => setHoveredMessageId(null)}
                   >
-                    <img
-                      src={`http://localhost:${port}${msg.senderProfilePicture}`}
-                      alt="Profile"
-                      style={styles.messageProfilePicture}
-                    />
-                    <p style={msg.sender === username ? styles.sentMessage : styles.receivedMessage}>
-                      {msg.content}
-                    </p>
+                    <div style={styles.message}>
+                      <img
+                        src={`http://localhost:${port}${msg.senderProfilePicture}`}
+                        alt="Profile"
+                        style={styles.messageProfilePicture}
+                      />
+                      <p style={msg.sender === username ? styles.sentMessage : styles.receivedMessage}>
+                        {msg.content}
+                      </p>
+                      {msg.sender === username && hoveredMessageId === msg._id && (
+                        <button
+                          onClick={() => deleteMessage(msg._id)}
+                          style={styles.deleteButton}
+                        >
+                          <i className="bi bi-trash"></i>
+                        </button>
+                      )}
+                    </div>
                   </div>
                 ))}
                 {isTyping && (
@@ -304,7 +323,7 @@ const styles = {
   messages: {
     display: 'flex',
     flexDirection: 'column',
-    gap: '10px',
+    gap: '5px',
     paddingBottom: '20px',
   },
   typingIndicator: {
@@ -316,19 +335,19 @@ const styles = {
     display: 'flex',
     justifyContent: 'flex-end',
     alignItems: 'center',
-    marginBottom: '10px',
+    marginBottom: '5px',
   },
   receivedMessageContainer: {
     display: 'flex',
     justifyContent: 'flex-start',
     alignItems: 'center',
-    marginBottom: '10px',
+    marginBottom: '5px',
   },
   messageProfilePicture: {
     width: '30px',
     height: '30px',
     borderRadius: '50%',
-    marginRight: '10px',
+    marginRight: '5px',
   },
   sentMessage: {
     textAlign: 'right',
@@ -353,6 +372,19 @@ const styles = {
     borderRadius: '5px',
     cursor: 'pointer',
     marginTop: '10px',
+  },
+  deleteButton: {
+    backgroundColor: 'transparent',
+    border: 'none',
+    color: '#ff5555',
+    cursor: 'pointer',
+    fontSize: '14px',
+  },
+  message: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '5px',
+    position: 'relative',
   },
 };
 
