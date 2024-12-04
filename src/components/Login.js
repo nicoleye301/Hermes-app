@@ -1,18 +1,40 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
 
-function Login({setCurrentUser}) {
+const port = 5003; 
+const baseURL = `http://localhost:${port}`;
+
+function Login({ setCurrentUser }) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const navigate = useNavigate();
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
 
     if (username && password) {
-      setCurrentUser(username); // Set username globally
-      navigate('/chat'); // Redirect to Chat
+      try {
+        // Send a request to the backend server to authenticate
+        const response = await axios.post(`${baseURL}/login`, {
+          username,
+          password,
+        });
+
+        if (response.status === 200) {
+          // Set the current user globally if login is successful
+          setCurrentUser(username);
+          navigate('/chat'); // Redirect to Chat
+        }
+      } catch (err) {
+        // If login fails, display the error message
+        if (err.response && err.response.status === 400) {
+          setError('Invalid username or password');
+        } else {
+          setError('An unexpected error occurred. Please try again later.');
+        }
+      }
     } else {
       setError('Please enter valid credentials');
     }
