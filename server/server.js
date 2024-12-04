@@ -390,24 +390,54 @@ app.get('/user/:username', async (req, res) => {
 // Delete a message
 app.delete('/message/:messageId', async (req, res) => {
   const { messageId } = req.params;
+  const { username } = req.body;
 
   try {
+    // Find the message by ID
     const message = await Message.findById(messageId);
 
     if (!message) {
       return res.status(404).json({ message: 'Message not found' });
     }
 
-    // Check if the requester is the sender
-    if (message.sender !== req.body.username) {
+    // Check if the requester is the sender of the message
+    if (message.sender !== username) {
       return res.status(403).json({ message: 'You can only delete your own messages' });
     }
 
+    // Delete the message
     await Message.findByIdAndDelete(messageId);
+
     res.status(200).json({ message: 'Message deleted successfully' });
   } catch (error) {
     console.error('Error deleting message:', error);
     res.status(500).json({ message: 'Failed to delete message', error });
+  }
+});
+
+// Update User's Password
+app.put('/user/:username/password', async (req, res) => {
+  const { username } = req.params;
+  const { newPassword } = req.body;
+
+  try {
+    // Find the user
+    const user = await User.findOne({ username });
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    // Hash the new password
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    // Update the user's password
+    user.password = hashedPassword;
+    await user.save();
+
+    res.status(200).json({ success: true, message: 'Password updated successfully!' });
+  } catch (error) {
+    console.error('Error updating password:', error);
+    res.status(500).json({ success: false, message: 'Failed to update password', error: error.message });
   }
 });
 

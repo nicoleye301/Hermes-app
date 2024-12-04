@@ -29,6 +29,9 @@ function Sidebar({setCurrentUser}) {
             <Link to="/posts" className="d-block p-3 link-light text-decoration-none" title="Posts">
               <i className="bi-card-text" style={styles.icon}></i>
             </Link>
+            <Link to="/settings" className="d-block p-3 link-light text-decoration-none" title="Settings">
+              <i className="bi-gear" style={styles.icon}></i>
+            </Link>
             <button onClick={()=>setShowDialog(true)} className="d-block p-3 link-light text-decoration-none border-0 bg-transparent" title="Logout" style={styles.logoutButton}>
               <i className="bi-box-arrow-right" style={styles.icon}></i>
             </button>
