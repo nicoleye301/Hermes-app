@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import io from 'socket.io-client';
 import axios from 'axios';
+import {useNavigate} from "react-router-dom";
 
 const port = 5003;
 const socket = io(`http://localhost:${port}`);
@@ -17,6 +18,15 @@ function Chat({ username }) {
 
   // Reference to the messages container
   const messagesContainerRef = useRef(null);
+
+  const navigate = useNavigate();
+
+  // Redirect to login page if not logged in
+  useEffect(() => {
+    if (!username) {
+      navigate("/login");
+    }
+  }, [navigate, username]);
 
   // Fetch logged-in user's profile picture on load
   useEffect(() => {
