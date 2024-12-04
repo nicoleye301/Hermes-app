@@ -6,6 +6,7 @@ const userSchema = new mongoose.Schema({
   bio: { type: String },
   nickname: { type: String },
   friends: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+  friendRequests: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }], 
   profilePicture: { type: String, default: '/uploads/profile-pictures/default.jpg' },
   createdAt: { type: Date, default: Date.now },
 });

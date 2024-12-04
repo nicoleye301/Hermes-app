@@ -119,37 +119,94 @@ app.post('/login', async (req, res) => {
   }
 });
 
-// Add a friend
-app.post('/add-friend', async (req, res) => {
-  const { username, friendUsername } = req.body;
+// Send Friend Request
+app.post('/send-friend-request', async (req, res) => {
+  const { username, targetUsername } = req.body;
 
   try {
-    // Find both users
     const user = await User.findOne({ username });
-    const friend = await User.findOne({ username: friendUsername });
+    const targetUser = await User.findOne({ username: targetUsername });
 
-    if (!user || !friend) {
-      return res.status(404).json({ message: 'User or friend not found' });
+    if (!user || !targetUser) {
+      return res.status(404).json({ message: 'User not found' });
     }
 
-    // Check if already friends
-    if (user.friends.includes(friend._id)) {
-      return res.status(400).json({ message: 'Already friends' });
+    // Ensure friendRequests is properly initialized
+    if (!targetUser.friendRequests) {
+      targetUser.friendRequests = [];
     }
 
-    // Add each other as friends
-    user.friends.push(friend._id);
-    friend.friends.push(user._id);
-    await user.save();
-    await friend.save();
+    // Check if friend request already exists
+    if (targetUser.friendRequests.includes(user._id)) {
+      return res.status(400).json({ message: 'Friend request already sent' });
+    }
 
-    res.status(200).json({ message: 'Friend added successfully' });
+    targetUser.friendRequests.push(user._id);
+    await targetUser.save();
+
+    res.status(200).json({ message: 'Friend request sent successfully' });
   } catch (error) {
-    res.status(500).json({ message: 'Error adding friend', error });
+    console.error('Error sending friend request:', error);
+    res.status(500).json({ message: 'Error sending friend request', error });
   }
 });
 
-// Get user's friends including their profile pictures
+
+// Accept Friend Request
+app.post('/accept-friend-request', async (req, res) => {
+  const { username, requesterUsername } = req.body;
+
+  try {
+    const user = await User.findOne({ username });
+    const requester = await User.findOne({ username: requesterUsername });
+
+    if (!user || !requester) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    if (!user.friendRequests.includes(requester._id)) {
+      return res.status(400).json({ message: 'No friend request from this user' });
+    }
+
+    user.friendRequests = user.friendRequests.filter(id => !id.equals(requester._id));
+    user.friends.push(requester._id);
+    requester.friends.push(user._id);
+
+    await user.save();
+    await requester.save();
+
+    res.status(200).json({ message: 'Friend request accepted successfully' });
+  } catch (error) {
+    res.status(500).json({ message: 'Error accepting friend request', error });
+  }
+});
+
+// Reject Friend Request
+app.post('/reject-friend-request', async (req, res) => {
+  const { username, requesterUsername } = req.body;
+
+  try {
+    const user = await User.findOne({ username });
+    const requester = await User.findOne({ username: requesterUsername });
+
+    if (!user || !requester) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    if (!user.friendRequests.includes(requester._id)) {
+      return res.status(400).json({ message: 'No friend request from this user' });
+    }
+
+    user.friendRequests = user.friendRequests.filter(id => !id.equals(requester._id));
+    await user.save();
+
+    res.status(200).json({ message: 'Friend request rejected successfully' });
+  } catch (error) {
+    res.status(500).json({ message: 'Error rejecting friend request', error });
+  }
+});
+
+// Get user's friends including their profile pictures and last message timestamp
 app.get('/friends/:username', async (req, res) => {
   const { username } = req.params;
 
@@ -159,9 +216,40 @@ app.get('/friends/:username', async (req, res) => {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    res.json(user.friends);
+    const friendsWithLastMessage = await Promise.all(user.friends.map(async (friend) => {
+      const lastMessage = await Message.findOne({
+        $or: [
+          { sender: username, receiver: friend.username },
+          { sender: friend.username, receiver: username },
+        ],
+      }).sort({ timestamp: -1 }).exec();
+
+      return {
+        ...friend.toObject(),
+        lastMessageTimestamp: lastMessage ? lastMessage.timestamp : new Date(0), // default to 1970 if no message
+      };
+    }));
+
+    res.json(friendsWithLastMessage);
   } catch (error) {
     res.status(500).json({ message: 'Error fetching friends', error });
+  }
+});
+
+
+// Get user's friend requests
+app.get('/friend-requests/:username', async (req, res) => {
+  const { username } = req.params;
+
+  try {
+    const user = await User.findOne({ username }).populate('friendRequests', 'username profilePicture');
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    res.json(user.friendRequests);
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching friend requests', error });
   }
 });
 
@@ -215,11 +303,11 @@ app.post('/message', async (req, res) => {
       return res.status(403).json({ message: 'You can only message your friends' });
     }
 
-    // Save the message
-    const newMessage = new Message({ sender, receiver, content });
+    // Save the message with a timestamp
+    const newMessage = new Message({ sender, receiver, content, timestamp: new Date() });
     await newMessage.save();
 
-    res.status(201).json({ message: 'Message sent successfully' });
+    res.status(201).json({ message: 'Message sent successfully', newMessage });
   } catch (error) {
     res.status(500).json({ message: 'Error sending message', error });
   }
@@ -445,16 +533,20 @@ app.put('/user/:username/password', async (req, res) => {
 io.on('connection', (socket) => {
   console.log('New client connected:', socket.id);
 
+  // Join a specific room based on the username
+  socket.on('joinRoom', (username) => {
+    console.log(`${username} joined room`);
+    socket.join(username);
+  });
+
   // Listen for typing event
   socket.on('typing', ({ sender, receiver }) => {
-    // Notify the receiver that the sender is typing
-    socket.broadcast.emit(`typing-${receiver}`, { sender });
+    io.to(receiver).emit(`typing-${receiver}`, { sender });
   });
 
   // Listen for stopTyping event
   socket.on('stopTyping', ({ sender, receiver }) => {
-    // Notify the receiver that the sender has stopped typing
-    socket.broadcast.emit(`stopTyping-${receiver}`, { sender });
+    io.to(receiver).emit(`stopTyping-${receiver}`, { sender });
   });
 
   // Listen for messages
@@ -472,17 +564,14 @@ io.on('connection', (socket) => {
 
       // Add profile picture data to the message object
       const messageWithProfilePictures = {
-        sender,
-        receiver,
-        content,
+        ...newMessage.toObject(),
         senderProfilePicture: senderUser.profilePicture,
         receiverProfilePicture: receiverUser.profilePicture,
-        timestamp: newMessage.timestamp,
       };
 
-      // Emit the message only to the intended receiver and the sender
-      socket.emit('receiveMessage', messageWithProfilePictures); // Emit to sender
-      socket.broadcast.emit('receiveMessage', messageWithProfilePictures); // Emit to receiver
+      // Emit the message to both the sender and the receiver
+      io.to(sender).emit('receiveMessage', messageWithProfilePictures); // Emit to sender
+      io.to(receiver).emit('receiveMessage', messageWithProfilePictures); // Emit to receiver
     } catch (error) {
       console.error('Error saving message:', error);
     }
@@ -493,6 +582,7 @@ io.on('connection', (socket) => {
     console.log('Client disconnected:', socket.id);
   });
 });
+
 
 // Start Server
 const PORT = process.env.PORT || 5003;

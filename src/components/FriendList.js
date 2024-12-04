@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import {useNavigate} from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 const port = 5003;
 
-function FriendList({username}) {
+function FriendList({ username }) {
   const [friendUsername, setFriendUsername] = useState('');
   const [friends, setFriends] = useState([]);
+  const [friendRequests, setFriendRequests] = useState([]);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
@@ -18,44 +19,100 @@ function FriendList({username}) {
     }
   }, [navigate, username]);
 
-  // Fetch friends on component load
+  // Fetch friends and their last message on component load
   useEffect(() => {
-    const fetchFriends = async () => {
+    const fetchFriendsWithLastMessages = async () => {
       try {
         const response = await axios.get(`http://localhost:${port}/friends/${username}`);
-        setFriends(response.data);
+        const friendsWithMessages = await Promise.all(response.data.map(async (friend) => {
+          const messageResponse = await axios.get(`http://localhost:${port}/messages/${username}/${friend.username}`);
+          const lastMessage = messageResponse.data[messageResponse.data.length - 1];
+          return {
+            ...friend,
+            lastMessageTimestamp: lastMessage ? lastMessage.timestamp : null,
+          };
+        }));
+
+        // Sort friends by last message timestamp, with latest first
+        friendsWithMessages.sort((a, b) => new Date(b.lastMessageTimestamp) - new Date(a.lastMessageTimestamp));
+
+        setFriends(friendsWithMessages);
       } catch (error) {
-        console.error('Error fetching friends:', error);
+        console.error('Error fetching friends or messages:', error);
       }
     };
-    fetchFriends();
+    fetchFriendsWithLastMessages();
   }, [username]);
 
-  const handleAddFriend = async (e) => {
+  // Fetch friend requests on component load
+  useEffect(() => {
+    const fetchFriendRequests = async () => {
+      try {
+        const response = await axios.get(`http://localhost:${port}/friend-requests/${username}`);
+        setFriendRequests(response.data);
+      } catch (error) {
+        console.error('Error fetching friend requests:', error);
+      }
+    };
+    fetchFriendRequests();
+  }, [username]);
+
+  const handleSendFriendRequest = async (e) => {
     e.preventDefault();
     setError('');
     setSuccess('');
 
     try {
-      const response = await axios.post(`http://localhost:${port}/add-friend`, {
+      const response = await axios.post(`http://localhost:${port}/send-friend-request`, {
         username,
-        friendUsername,
+        targetUsername: friendUsername,
       });
       setSuccess(response.data.message);
       setFriendUsername(''); // Clear input
+    } catch (error) {
+      console.error('Error sending friend request:', error);
+      setError(error.response?.data?.message || 'Error sending friend request');
+    }
+  };
+
+  const handleAcceptFriendRequest = async (requesterUsername) => {
+    try {
+      const response = await axios.post(`http://localhost:${port}/accept-friend-request`, {
+        username,
+        requesterUsername,
+      });
+      setSuccess(response.data.message);
+
+      // Remove the accepted request from friendRequests
+      setFriendRequests(friendRequests.filter(request => request.username !== requesterUsername));
 
       // Update friends list
       const updatedFriends = await axios.get(`http://localhost:${port}/friends/${username}`);
       setFriends(updatedFriends.data);
     } catch (error) {
-      setError(error.response?.data?.message || 'Error adding friend');
+      setError(error.response?.data?.message || 'Error accepting friend request');
+    }
+  };
+
+  const handleRejectFriendRequest = async (requesterUsername) => {
+    try {
+      const response = await axios.post(`http://localhost:${port}/reject-friend-request`, {
+        username,
+        requesterUsername,
+      });
+      setSuccess(response.data.message);
+
+      // Remove the rejected request from friendRequests
+      setFriendRequests(friendRequests.filter(request => request.username !== requesterUsername));
+    } catch (error) {
+      setError(error.response?.data?.message || 'Error rejecting friend request');
     }
   };
 
   return (
     <div style={styles.container}>
       <h1>Friend List</h1>
-      <form onSubmit={handleAddFriend} style={styles.form}>
+      <form onSubmit={handleSendFriendRequest} style={styles.form}>
         {error && <p style={styles.error}>{error}</p>}
         {success && <p style={styles.success}>{success}</p>}
         <input
@@ -66,7 +123,7 @@ function FriendList({username}) {
           required
           style={styles.input}
         />
-        <button type="submit" style={styles.button}>Add Friend</button>
+        <button type="submit" style={styles.button}>Send Friend Request</button>
       </form>
       <h2>Your Friends:</h2>
       <ul style={styles.friendList}>
@@ -77,7 +134,41 @@ function FriendList({username}) {
               alt="Profile"
               style={styles.profilePicture}
             />
-            {friend.username}
+            <div>
+              <span>{friend.username}</span>
+              {friend.lastMessageTimestamp && (
+                <div style={styles.timestamp}>
+                  Last message: {new Date(friend.lastMessageTimestamp).toLocaleString()}
+                </div>
+              )}
+            </div>
+          </li>
+        ))}
+      </ul>
+      <h2>Friend Requests:</h2>
+      <ul style={styles.friendList}>
+        {friendRequests.map((request) => (
+          <li key={request._id} style={styles.friendItem}>
+            <img
+              src={`http://localhost:${port}${request.profilePicture}`}
+              alt="Profile"
+              style={styles.profilePicture}
+            />
+            {request.username}
+            <div style={styles.requestButtons}>
+              <button
+                onClick={() => handleAcceptFriendRequest(request.username)}
+                style={styles.acceptButton}
+              >
+                Accept
+              </button>
+              <button
+                onClick={() => handleRejectFriendRequest(request.username)}
+                style={styles.rejectButton}
+              >
+                Reject
+              </button>
+            </div>
           </li>
         ))}
       </ul>
@@ -94,7 +185,7 @@ const styles = {
     padding: '20px',
     boxShadow: '0 4px 8px rgba(0, 0, 0, 0.2)',
     borderRadius: '8px',
-    backgroundColor: '#2c2f33', 
+    backgroundColor: '#2c2f33',
     color: '#ffffff',
   },
   form: {
@@ -138,6 +229,30 @@ const styles = {
     height: '30px',
     borderRadius: '50%',
     marginRight: '10px',
+  },
+  requestButtons: {
+    display: 'flex',
+    gap: '10px',
+  },
+  timestamp: {
+    fontSize: '12px',
+    color: '#99aab5',
+  },
+  acceptButton: {
+    padding: '5px 10px',
+    backgroundColor: '#43b581',
+    color: '#ffffff',
+    border: 'none',
+    borderRadius: '4px',
+    cursor: 'pointer',
+  },
+  rejectButton: {
+    padding: '5px 10px',
+    backgroundColor: '#f04747',
+    color: '#ffffff',
+    border: 'none',
+    borderRadius: '4px',
+    cursor: 'pointer',
   },
   error: {
     color: 'red',

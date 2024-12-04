@@ -29,7 +29,7 @@ function App() {
             <Route path="/friends" element={<FriendList username={currentUser} />} />
             <Route path="/profile" element={<Profile username={currentUser} />} />
             <Route path="/posts" element={<PostPage username={currentUser} />} />
-            <Route path="/settings" element={<Settings username={currentUser} />} /> {/* New Settings Route */}
+            <Route path="/settings" element={<Settings username={currentUser} />} />
           </Routes>
         </div>
       </div>

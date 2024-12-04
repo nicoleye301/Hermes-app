@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import io from 'socket.io-client';
 import axios from 'axios';
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from 'react-router-dom';
 import 'bootstrap-icons/font/bootstrap-icons.css';
 
 const port = 5003;
-const socket = io(`http://localhost:${port}`);
+let socket;
 
 function Chat({ username }) {
   const [friends, setFriends] = useState([]);
@@ -16,7 +16,7 @@ function Chat({ username }) {
   const [typing, setTyping] = useState(false);
   const [isTyping, setIsTyping] = useState(null);
   const [notifications, setNotifications] = useState({});
-  const [hoveredMessageId, setHoveredMessageId] = useState(null); // Track hovered message
+  const [hoveredMessageId, setHoveredMessageId] = useState(null);
 
   // Reference to the messages container
   const messagesContainerRef = useRef(null);
@@ -25,9 +25,74 @@ function Chat({ username }) {
   const navigate = useNavigate();
   useEffect(() => {
     if (!username) {
-      navigate("/login");
+      navigate('/login');
     }
   }, [navigate, username]);
+
+  // Initialize socket connection and handle listeners
+  useEffect(() => {
+    if (!socket) {
+      socket = io(`http://localhost:${port}`);
+    }
+
+    if (username) {
+      socket.emit('joinRoom', username);
+
+      // Listen for incoming messages
+      socket.on('receiveMessage', (newMessage) => {
+        setMessages((prevMessages) => {
+          if (!prevMessages.find((msg) => msg._id === newMessage._id)) {
+            return [...prevMessages, newMessage];
+          }
+          return prevMessages;
+        });
+
+        // Update notifications if the message is for the current user but not in the current chat
+        if (newMessage.receiver === username && newMessage.sender !== selectedFriend) {
+          setNotifications((prev) => ({
+            ...prev,
+            [newMessage.sender]: (prev[newMessage.sender] || 0) + 1,
+          }));
+        }
+
+        if (newMessage.receiver === username || newMessage.sender === username) {
+          const friendToMove = newMessage.sender === username ? newMessage.receiver : newMessage.sender;
+          setFriends((prevFriends) => {
+            const updatedFriends = prevFriends.map((friend) =>
+              friend.username === friendToMove
+                ? { ...friend, lastMessageTimestamp: new Date().toISOString() }
+                : friend
+            );
+            return updatedFriends
+              .filter(Boolean)
+              .sort((a, b) => new Date(b.lastMessageTimestamp) - new Date(a.lastMessageTimestamp));
+          });
+        }
+      });
+
+      // Handle typing indicators
+      socket.on(`typing-${username}`, ({ sender }) => setIsTyping(sender));
+      socket.on(`stopTyping-${username}`, ({ sender }) => {
+        if (isTyping === sender) {
+          setIsTyping(null);
+        }
+      });
+
+      return () => {
+        // Cleanup socket listeners on component unmount
+        socket.off('receiveMessage');
+        socket.off(`typing-${username}`);
+        socket.off(`stopTyping-${username}`);
+      };
+    }
+  }, [username, selectedFriend, isTyping]);
+
+  // Scroll to the bottom of the messages container when messages change
+  useEffect(() => {
+    if (messagesContainerRef.current) {
+      messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+    }
+  }, [messages]);
 
   // Fetch logged-in user's profile picture on load
   useEffect(() => {
@@ -47,7 +112,10 @@ function Chat({ username }) {
     const fetchFriends = async () => {
       try {
         const response = await axios.get(`http://localhost:${port}/friends/${username}`);
-        setFriends(response.data);
+        const sortedFriends = response.data.sort(
+          (a, b) => new Date(b.lastMessageTimestamp) - new Date(a.lastMessageTimestamp)
+        );
+        setFriends(sortedFriends);
       } catch (error) {
         console.error('Error fetching friends:', error);
       }
@@ -62,7 +130,6 @@ function Chat({ username }) {
         try {
           const response = await axios.get(`http://localhost:${port}/messages/${username}/${selectedFriend}`);
           setMessages(response.data);
-          // Reset notifications for the selected friend
           setNotifications((prev) => ({ ...prev, [selectedFriend]: 0 }));
         } catch (error) {
           console.error('Error fetching messages:', error);
@@ -71,53 +138,6 @@ function Chat({ username }) {
       fetchMessages();
     }
   }, [selectedFriend, username]);
-
-  // Handle new messages from Socket.IO
-  useEffect(() => {
-    socket.on('receiveMessage', (newMessage) => {
-      // Only add the message if it doesn't already exist in the state
-      setMessages((prevMessages) => {
-        if (!prevMessages.find((msg) => msg._id === newMessage._id)) {
-          return [...prevMessages, newMessage];
-        }
-        return prevMessages;
-      });
-
-      // Update notifications for the sender if it's not the selected friend
-      if (newMessage.receiver === username && newMessage.sender !== selectedFriend) {
-        setNotifications((prev) => ({
-          ...prev,
-          [newMessage.sender]: (prev[newMessage.sender] || 0) + 1,
-        }));
-      }
-
-      // Move the friend to the top of the friend list if they sent or received a new message
-      if (newMessage.receiver === username || newMessage.sender === username) {
-        const friendToMove = newMessage.sender === username ? newMessage.receiver : newMessage.sender;
-        setFriends((prevFriends) => {
-          const updatedFriends = prevFriends.filter((friend) => friend.username !== friendToMove);
-          const friendToAdd = prevFriends.find((friend) => friend.username === friendToMove);
-          return [friendToAdd, ...updatedFriends].filter(Boolean); // Ensure friendToAdd exists
-        });
-      }
-    });
-
-    socket.on(`typing-${username}`, ({ sender }) => {
-      setIsTyping(sender);
-    });
-
-    socket.on(`stopTyping-${username}`, ({ sender }) => {
-      if (isTyping === sender) {
-        setIsTyping(null);
-      }
-    });
-
-    return () => {
-      socket.off('receiveMessage');
-      socket.off(`typing-${username}`);
-      socket.off(`stopTyping-${username}`);
-    };
-  }, [selectedFriend, username, isTyping]);
 
   // Scroll to the bottom of the messages container when messages change
   useEffect(() => {
@@ -134,10 +154,13 @@ function Chat({ username }) {
         receiver: selectedFriend,
         content: message,
         senderProfilePicture: userProfilePicture,
+        timestamp: new Date().toISOString(),
       };
 
-      // Emit the message through Socket.IO
-      socket.emit('sendMessage', messageData);
+      // Emit the message through Socket.IO without updating UI immediately to avoid duplicates
+      if (socket) {
+        socket.emit('sendMessage', messageData);
+      }
       setMessage('');
     }
   };
@@ -146,15 +169,16 @@ function Chat({ username }) {
   const handleTyping = (e) => {
     setMessage(e.target.value);
 
-    if (!typing) {
+    if (socket && !typing) {
       setTyping(true);
       socket.emit('typing', { sender: username, receiver: selectedFriend });
     }
 
-    // Stop typing after 1 second
     setTimeout(() => {
-      setTyping(false);
-      socket.emit('stopTyping', { sender: username, receiver: selectedFriend });
+      if (socket) {
+        setTyping(false);
+        socket.emit('stopTyping', { sender: username, receiver: selectedFriend });
+      }
     }, 1000);
   };
 
@@ -162,12 +186,30 @@ function Chat({ username }) {
   const deleteMessage = async (messageId) => {
     try {
       await axios.delete(`http://localhost:${port}/message/${messageId}`, {
-        data: { username }, // Pass the username to verify if the sender is deleting
+        data: { username },
       });
       setMessages((prevMessages) => prevMessages.filter((msg) => msg._id !== messageId));
     } catch (error) {
       console.error('Error deleting message:', error);
     }
+  };
+
+  const formatTime = (timestamp) => {
+    const date = new Date(timestamp);
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+  };
+
+  const formatFullDateTime = (timestamp) => {
+    const date = new Date(timestamp);
+    return date.toLocaleString([], {
+      weekday: 'short',
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true,
+    });
   };
 
   return (
@@ -188,6 +230,12 @@ function Chat({ username }) {
               />
               <div style={styles.friendInfo}>
                 <span>{friend.username}</span>
+                <br />
+                <span style={styles.timestamp}>
+                  {friend.lastMessageTimestamp
+                    ? formatFullDateTime(friend.lastMessageTimestamp)
+                    : 'No messages yet'}
+                </span>
                 {notifications[friend.username] > 0 && (
                   <span style={styles.notificationBadge}>
                     {notifications[friend.username]}
@@ -204,22 +252,27 @@ function Chat({ username }) {
             <h2>Chat with {selectedFriend}</h2>
             <div style={styles.messagesContainer} ref={messagesContainerRef}>
               <div style={styles.messages}>
-                {messages.map((msg) => (
+                {messages.map((msg, index) => (
                   <div
-                    key={msg._id}
-                    style={msg.sender === username ? styles.sentMessageContainer : styles.receivedMessageContainer}
+                    key={`${msg._id}-${index}`}
+                    style={
+                      msg.sender === username ? styles.sentMessageContainer : styles.receivedMessageContainer
+                    }
                     onMouseEnter={() => setHoveredMessageId(msg._id)}
                     onMouseLeave={() => setHoveredMessageId(null)}
                   >
-                    <div style={styles.message}>
-                      <img
-                        src={`http://localhost:${port}${msg.senderProfilePicture}`}
-                        alt="Profile"
-                        style={styles.messageProfilePicture}
-                      />
-                      <p style={msg.sender === username ? styles.sentMessage : styles.receivedMessage}>
-                        {msg.content}
-                      </p>
+                    <div
+                      style={
+                        msg.sender === username
+                          ? styles.sentMessageBubble
+                          : styles.receivedMessageBubble
+                      }
+                    >
+                      <div style={styles.message}>
+                        <p style={styles.messageText}>{msg.content}</p>
+                      </div>
+                    </div>
+                    <div style={styles.messageInfo}>
                       {msg.sender === username && hoveredMessageId === msg._id && (
                         <button
                           onClick={() => deleteMessage(msg._id)}
@@ -228,6 +281,7 @@ function Chat({ username }) {
                           <i className="bi bi-trash"></i>
                         </button>
                       )}
+                      <span style={styles.timestampOutside}>{formatTime(msg.timestamp)}</span>
                     </div>
                   </div>
                 ))}
@@ -323,7 +377,7 @@ const styles = {
   messages: {
     display: 'flex',
     flexDirection: 'column',
-    gap: '5px',
+    gap: '10px',
     paddingBottom: '20px',
   },
   typingIndicator: {
@@ -343,19 +397,40 @@ const styles = {
     alignItems: 'center',
     marginBottom: '5px',
   },
-  messageProfilePicture: {
-    width: '30px',
-    height: '30px',
-    borderRadius: '50%',
-    marginRight: '5px',
-  },
-  sentMessage: {
-    textAlign: 'right',
-    color: '#7289da',
-  },
-  receivedMessage: {
-    textAlign: 'left',
+  sentMessageBubble: {
+    backgroundColor: '#7289da',
     color: '#ffffff',
+    padding: '10px',
+    borderRadius: '15px',
+    maxWidth: '60%',
+    position: 'relative',
+  },
+  receivedMessageBubble: {
+    backgroundColor: '#40444b',
+    color: '#ffffff',
+    padding: '10px',
+    borderRadius: '15px',
+    maxWidth: '60%',
+    position: 'relative',
+  },
+  message: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+  },
+  messageText: {
+    marginBottom: '5px',
+  },
+  messageInfo: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '10px',
+    marginTop: '5px',
+  },
+  timestampOutside: {
+    fontSize: '0.7em',
+    color: 'rgba(204, 204, 204, 0.7)',
+    marginTop: '5px',
   },
   input: {
     padding: '10px',
@@ -379,12 +454,6 @@ const styles = {
     color: '#ff5555',
     cursor: 'pointer',
     fontSize: '14px',
-  },
-  message: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '5px',
-    position: 'relative',
   },
 };
 
