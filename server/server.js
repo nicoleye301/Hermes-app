@@ -391,6 +391,18 @@ app.get('/user/:username', async (req, res) => {
 io.on('connection', (socket) => {
   console.log('New client connected:', socket.id);
 
+  // Listen for typing event
+  socket.on('typing', ({ sender, receiver }) => {
+    // Notify the receiver that the sender is typing
+    socket.broadcast.emit(`typing-${receiver}`, { sender });
+  });
+
+  // Listen for stopTyping event
+  socket.on('stopTyping', ({ sender, receiver }) => {
+    // Notify the receiver that the sender has stopped typing
+    socket.broadcast.emit(`stopTyping-${receiver}`, { sender });
+  });
+
   // Listen for messages
   socket.on('sendMessage', async (messageData) => {
     try {
