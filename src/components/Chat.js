@@ -19,9 +19,8 @@ function Chat({ username }) {
   // Reference to the messages container
   const messagesContainerRef = useRef(null);
 
-  const navigate = useNavigate();
-
   // Redirect to login page if not logged in
+  const navigate = useNavigate();
   useEffect(() => {
     if (!username) {
       navigate("/login");

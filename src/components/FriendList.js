@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import {useNavigate} from "react-router-dom";
 
 const port = 5003;
 
@@ -8,6 +9,14 @@ function FriendList({username}) {
   const [friends, setFriends] = useState([]);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+
+  // Redirect to login page if not logged in
+  const navigate = useNavigate();
+  useEffect(() => {
+    if (!username) {
+      navigate("/login");
+    }
+  }, [navigate, username]);
 
   // Fetch friends on component load
   useEffect(() => {

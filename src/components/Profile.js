@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
+import {useNavigate} from "react-router-dom";
 
 const port = 5003;
 const baseURL = `http://localhost:${port}`;
@@ -14,6 +15,14 @@ const Profile = ({username}) => {
   const [newBio, setNewBio] = useState('');
   const [newNickname, setNewNickname] = useState('');
   const [error, setError] = useState(null);
+
+  // Redirect to login page if not logged in
+  const navigate = useNavigate();
+  useEffect(() => {
+    if (!username) {
+      navigate("/login");
+    }
+  }, [navigate, username]);
 
   // Fetch user profile data from the backend
   const fetchUserProfile = useCallback(async () => {
