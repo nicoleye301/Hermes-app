@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: hermes-chat-server
+    env: node
+    plan: free
+    region: oregon  
+    buildCommand: "npm install"
+    startCommand: "node server/server.js"
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: MONGO_URI
+        fromSecret: MONGO_URI
+      - key: PORT
+        value: 5003
+    healthCheckPath: "/"
