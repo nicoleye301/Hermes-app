@@ -44,8 +44,7 @@ function Login({ setCurrentUser }) {
     <div style={styles.container}>
       {/* Logo */}
       <img src="/logo/hermes-logo.png" alt="App Logo" style={styles.logo} />
-      {/* Catchphrase */}
-      <h2 style={styles.tagline}>Connect instantly, chat effortlessly</h2>
+
       <div style={styles.loginBox}>
         <h1>Login</h1>
         <form onSubmit={handleLogin} style={styles.form}>
@@ -77,6 +76,9 @@ function Login({ setCurrentUser }) {
           </span>
         </p>
       </div>
+      {/* Catchphrase */}
+      <br/>
+      <h2 style={styles.tagline}>Connect instantly, Chat effortlessly</h2>
     </div>
   );
 }
