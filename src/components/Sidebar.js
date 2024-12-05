@@ -70,7 +70,7 @@ const styles = {
     top: 0,
     left: 0,
     height: '100vh',
-    width: '80px',
+    width: '70px',
     backgroundColor: '#2c2f33',
     display: 'flex',
     alignItems: 'center',

@@ -232,7 +232,7 @@ function Chat({ username }) {
   return (
     <div style={styles.container}>
       <div style={styles.sidebar}>
-        <h2>Your Friends</h2>
+        <h2 style={styles.chatHeader}>Messages</h2>
         <ul style={styles.friendList}>
           {friends.map((friend) => (
             <li
@@ -267,7 +267,7 @@ function Chat({ username }) {
         {selectedFriend ? (
           <>
             <div style={styles.chatHeader}>
-              <h2>Chat with {selectedFriend}</h2>
+              <h2 style={styles.chatHeaderText}>{selectedFriend}</h2>
               <button onClick={openFriendProfile} style={styles.viewProfileButton}>
                 View Profile
               </button>
@@ -326,7 +326,7 @@ function Chat({ username }) {
             </button>
           </>
         ) : (
-          <h2>Select a friend to start chatting</h2>
+          <h2 style={styles.chatHeader}>Select a friend to start chatting</h2>
         )}
       </div>
 
@@ -353,18 +353,18 @@ function Chat({ username }) {
 const styles = {
   container: {
     display: 'flex',
-    height: '95vh',
+    height: '100vh',
   },
   sidebar: {
-    width: '20%',
+    width: '25%',
     backgroundColor: '#2c2f33',
     padding: '20px',
     color: '#ffffff',
     overflowY: 'auto',
   },
   chatWindow: {
-    width: '80%',
-    padding: '10px',
+    width: '75%',
+    padding: '20px',
     backgroundColor: '#36393f',
     color: '#ffffff',
     display: 'flex',
@@ -372,12 +372,17 @@ const styles = {
     position: 'relative',
   },
   chatHeader: {
+    position: 'relative',
     display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: '10px',
+    justifyContent: 'center',
+    marginBottom: '20px',
+  },
+  chatHeaderText: {
+    margin: 0,
   },
   viewProfileButton: {
+    position: 'absolute',
+    right: 0,
     padding: '8px 12px',
     backgroundColor: '#4e5d94',
     color: '#ffffff',
@@ -391,6 +396,7 @@ const styles = {
     padding: 0,
     color: '#ffffff',
   },
+
   friendItem: (isSelected) => ({
     padding: '10px',
     backgroundColor: isSelected ? '#7289da' : '#2c2f33',
@@ -433,11 +439,9 @@ const styles = {
   messagesContainer: {
     flexGrow: 1,
     overflowY: 'scroll',
-    border: '1px solid #42454a',
     marginBottom: '10px',
     padding: '10px',
-    backgroundColor: '#2c2f33',
-    borderRadius: '8px',
+    backgroundColor: '#36393f',
   },
   messages: {
     display: 'flex',

@@ -5,19 +5,16 @@
   height: 100vh;
 }
 
-.sidebar {
-  width: 80px;
-  flex-shrink: 0;
-}
 
 .content-container {
   flex-grow: 1;
   overflow-y: auto;
-  padding: 20px;
+  padding: 0;
   background-color: #36393f;
   color: #ffffff;
+  height: auto;
 }
 
 .logged-in {
-  margin-left: 80px; /* Adjust for sidebar width */
+  margin-left: 70px; /* Adjust for sidebar width */
 }
