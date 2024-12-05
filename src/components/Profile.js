@@ -2,8 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { useNavigate } from "react-router-dom";
 
-const port = 5003;
-const baseURL = `http://localhost:${port}`;
+const baseURL = `https://hermes-backend-69ja.onrender.com`;
 
 const Profile = ({ username }) => {
   const [bio, setBio] = useState('');

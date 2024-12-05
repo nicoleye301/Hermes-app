@@ -4,7 +4,7 @@ import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import 'bootstrap-icons/font/bootstrap-icons.css';
 
-const port = 5003;
+const baseURL = `https://hermes-backend-69ja.onrender.com`;
 let socket;
 
 function Chat({ username }) {
@@ -34,7 +34,7 @@ function Chat({ username }) {
   // Initialize socket connection and handle listeners
   useEffect(() => {
     if (!socket) {
-      socket = io(`http://localhost:${port}`);
+      socket = io(baseURL);
     }
 
     if (username) {
@@ -111,7 +111,7 @@ function Chat({ username }) {
   useEffect(() => {
     const fetchUserProfile = async () => {
       try {
-        const response = await axios.get(`http://localhost:${port}/user/${username}`);
+        const response = await axios.get(`${baseURL}/user/${username}`);
         setUserProfilePicture(response.data.profilePicture);
       } catch (error) {
         console.error('Error fetching user profile picture:', error);
@@ -124,7 +124,7 @@ function Chat({ username }) {
   useEffect(() => {
     const fetchFriends = async () => {
       try {
-        const response = await axios.get(`http://localhost:${port}/friends/${username}`);
+        const response = await axios.get(`${baseURL}/friends/${username}`);
         const sortedFriends = response.data.sort(
           (a, b) => new Date(b.lastMessageTimestamp) - new Date(a.lastMessageTimestamp)
         );
@@ -141,7 +141,7 @@ function Chat({ username }) {
     if (selectedFriend) {
       const fetchMessages = async () => {
         try {
-          const response = await axios.get(`http://localhost:${port}/messages/${username}/${selectedFriend}`);
+          const response = await axios.get(`${baseURL}/messages/${username}/${selectedFriend}`);
           setMessages(response.data);
           setNotifications((prev) => ({ ...prev, [selectedFriend]: 0 }));
         } catch (error) {
@@ -155,7 +155,7 @@ function Chat({ username }) {
   // Fetch friend's profile when clicking the "View Profile" button
   const openFriendProfile = async () => {
     try {
-      const response = await axios.get(`http://localhost:${port}/user/${selectedFriend}`);
+      const response = await axios.get(`${baseURL}/user/${selectedFriend}`);
       setFriendProfile(response.data);
       setIsBubbleOpen(true);
     } catch (error) {
@@ -202,7 +202,7 @@ function Chat({ username }) {
   // Delete message
   const deleteMessage = async (messageId) => {
     try {
-      await axios.delete(`http://localhost:${port}/message/${messageId}`, {
+      await axios.delete(`${baseURL}/message/${messageId}`, {
         data: { username },
       });
       setMessages((prevMessages) => prevMessages.filter((msg) => msg._id !== messageId));
@@ -241,7 +241,7 @@ function Chat({ username }) {
               onClick={() => setSelectedFriend(friend.username)}
             >
               <img
-                src={`http://localhost:${port}${friend.profilePicture}`}
+                src={`${baseURL}${friend.profilePicture}`}
                 alt="Profile"
                 style={styles.profilePicture}
               />
@@ -336,7 +336,7 @@ function Chat({ username }) {
           <div style={styles.profileOverlayContent}>
             <h2>{friendProfile.username}</h2>
             <img
-              src={`http://localhost:${port}${friendProfile.profilePicture}`}
+              src={`${baseURL}${friendProfile.profilePicture}`}
               alt="Profile"
               style={styles.profilePictureExtraLarge}
             />

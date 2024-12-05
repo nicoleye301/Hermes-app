@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useNavigate } from "react-router-dom";
 
-const port = 5003;
+
+const baseURL = `https://hermes-backend-69ja.onrender.com`
 
 function FriendList({ username }) {
   const [friendUsername, setFriendUsername] = useState('');
@@ -23,9 +24,9 @@ function FriendList({ username }) {
   useEffect(() => {
     const fetchFriendsWithLastMessages = async () => {
       try {
-        const response = await axios.get(`http://localhost:${port}/friends/${username}`);
+        const response = await axios.get(`${baseURL}/friends/${username}`);
         const friendsWithMessages = await Promise.all(response.data.map(async (friend) => {
-          const messageResponse = await axios.get(`http://localhost:${port}/messages/${username}/${friend.username}`);
+          const messageResponse = await axios.get(`${baseURL}/messages/${username}/${friend.username}`);
           const lastMessage = messageResponse.data[messageResponse.data.length - 1];
           return {
             ...friend,
@@ -48,7 +49,7 @@ function FriendList({ username }) {
   useEffect(() => {
     const fetchFriendRequests = async () => {
       try {
-        const response = await axios.get(`http://localhost:${port}/friend-requests/${username}`);
+        const response = await axios.get(`${baseURL}/friend-requests/${username}`);
         setFriendRequests(response.data);
       } catch (error) {
         console.error('Error fetching friend requests:', error);
@@ -63,7 +64,7 @@ function FriendList({ username }) {
     setSuccess('');
 
     try {
-      const response = await axios.post(`http://localhost:${port}/send-friend-request`, {
+      const response = await axios.post(`${baseURL}/send-friend-request`, {
         username,
         targetUsername: friendUsername,
       });
@@ -77,7 +78,7 @@ function FriendList({ username }) {
 
   const handleAcceptFriendRequest = async (requesterUsername) => {
     try {
-      const response = await axios.post(`http://localhost:${port}/accept-friend-request`, {
+      const response = await axios.post(`${baseURL}/accept-friend-request`, {
         username,
         requesterUsername,
       });
@@ -87,7 +88,7 @@ function FriendList({ username }) {
       setFriendRequests(friendRequests.filter(request => request.username !== requesterUsername));
 
       // Update friends list
-      const updatedFriends = await axios.get(`http://localhost:${port}/friends/${username}`);
+      const updatedFriends = await axios.get(`${baseURL}/friends/${username}`);
       setFriends(updatedFriends.data);
     } catch (error) {
       setError(error.response?.data?.message || 'Error accepting friend request');
@@ -96,7 +97,7 @@ function FriendList({ username }) {
 
   const handleRejectFriendRequest = async (requesterUsername) => {
     try {
-      const response = await axios.post(`http://localhost:${port}/reject-friend-request`, {
+      const response = await axios.post(`${baseURL}/reject-friend-request`, {
         username,
         requesterUsername,
       });
@@ -135,7 +136,7 @@ function FriendList({ username }) {
             {friends.map((friend) => (
               <li key={friend._id} style={styles.friendItem}>
                 <img
-                  src={`http://localhost:${port}${friend.profilePicture}`}
+                  src={`${baseURL}${friend.profilePicture}`}
                   alt="Profile"
                   style={styles.profilePicture}
                 />
@@ -158,7 +159,7 @@ function FriendList({ username }) {
             {friendRequests.map((request) => (
               <li key={request._id} style={styles.friendItem}>
                 <img
-                  src={`http://localhost:${port}${request.profilePicture}`}
+                  src={`${baseURL}${request.profilePicture}`}
                   alt="Profile"
                   style={styles.profilePicture}
                 />

@@ -2,8 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useNavigate } from "react-router-dom";
 
-const port = 5003;
-const baseURL = `http://localhost:${port}`;
+const baseURL = `https://hermes-backend-69ja.onrender.com`;
 
 function PostPage({ username }) {
   const [posts, setPosts] = useState([]);
@@ -75,7 +74,7 @@ function PostPage({ username }) {
     <div style={styles.container}>
       <div style={styles.newPostContainer}>
         <img
-          src={`http://localhost:${port}${profilePicture}`}
+          src={`${baseURL}${profilePicture}`}
           alt="Profile"
           style={styles.newPostProfilePicture}
         />
@@ -97,7 +96,7 @@ function PostPage({ username }) {
           <div key={index} style={styles.postCard}>
             <div style={styles.postHeader}>
               <img
-                src={`http://localhost:${port}${post.profilePicture || '/uploads/profile-pictures/default.jpg'}`}
+                src={`${baseURL}${post.profilePicture || '/uploads/profile-pictures/default.jpg'}`}
                 alt="Profile"
                 style={styles.postProfilePicture}
               />

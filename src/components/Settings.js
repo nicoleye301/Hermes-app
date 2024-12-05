@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import axios from 'axios';
 import 'bootstrap/dist/css/bootstrap.min.css';
 
-const port = 5003;
+const baseURL = `https://hermes-backend-69ja.onrender.com`;
+
 
 function Settings({ username }) {
   const [newPassword, setNewPassword] = useState('');
@@ -18,7 +19,7 @@ function Settings({ username }) {
 
     try {
       // Send the newly created password to the server-side endpoint.
-      const response = await axios.put(`http://localhost:${port}/user/${username}/password`, {
+      const response = await axios.put(`${baseURL}/user/${username}/password`, {
         newPassword,
       });
 

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
-const port = 5003;
+const baseURL = `https://hermes-backend-69ja.onrender.com`;
 
 function Signup() {
   const [username, setUsername] = useState('');
@@ -20,7 +20,7 @@ function Signup() {
     }
 
     try {
-      await axios.post(`http://localhost:${port}/register`, { username, password });
+      await axios.post(`${baseURL}/register`, { username, password });
       alert('Signup successful! Please log in.');
       navigate('/login');
     } catch (err) {
