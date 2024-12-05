@@ -42,72 +42,101 @@ function Login({ setCurrentUser }) {
 
   return (
     <div style={styles.container}>
-      <h1>Login</h1>
-      <form onSubmit={handleLogin} style={styles.form}>
-        {error && <p style={styles.error}>{error}</p>}
-        <input
-          type="text"
-          placeholder="Enter your username"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-          required
-          style={styles.input}
-        />
-        <input
-          type="password"
-          placeholder="Enter your password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-          style={styles.input}
-        />
-        <button type="submit" style={styles.button}>
-          Login
-        </button>
-      </form>
-      <p>
-        Don't have an account?{' '}
-        <span onClick={() => navigate('/signup')} style={styles.link}>
-          Sign up
-        </span>
-      </p>
+      {/* Logo */}
+      <img src="/logo/hermes-logo.png" alt="App Logo" style={styles.logo} />
+      {/* Catchphrase */}
+      <h2 style={styles.tagline}>Connect instantly, chat effortlessly</h2>
+      <div style={styles.loginBox}>
+        <h1>Login</h1>
+        <form onSubmit={handleLogin} style={styles.form}>
+          {error && <p style={styles.error}>{error}</p>}
+          <input
+            type="text"
+            placeholder="Enter your username"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            required
+            style={styles.input}
+          />
+          <input
+            type="password"
+            placeholder="Enter your password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            style={styles.input}
+          />
+          <button type="submit" style={styles.button}>
+            Login
+          </button>
+        </form>
+        <p>
+          Don't have an account?{' '}
+          <span onClick={() => navigate('/signup')} style={styles.link}>
+            Sign up
+          </span>
+        </p>
+      </div>
     </div>
   );
 }
 
 const styles = {
   container: {
-    maxWidth: '400px',
-    margin: '50px auto',
-    textAlign: 'center',
-    fontFamily: 'Arial, sans-serif',
-    padding: '20px',
-    boxShadow: '0 4px 8px rgba(0, 0, 0, 0.2)',
-    borderRadius: '8px',
-    backgroundColor: '#2c2f33',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: '95vh',
+    backgroundColor: '#202225',
     color: '#ffffff',
+    textAlign: 'center',
+    padding: '20px',
+  },
+  logo: {
+    width: '200px',
+    height: '200px',
+    marginBottom: '20px',
+  },
+  tagline: {
+    fontSize: '1.5rem',
+    fontFamily: 'Courier New, Courier, monospace',
+    marginBottom: '30px',
+    color: '#7289da',
+  },
+  loginBox: {
+    maxWidth: '400px',
+    width: '100%',
+    backgroundColor: '#2c2f33',
+    padding: '30px',
+    borderRadius: '8px',
+    boxShadow: '0 4px 8px rgba(0, 0, 0, 0.2)',
   },
   form: {
     display: 'flex',
     flexDirection: 'column',
+    gap: '15px',
   },
   input: {
-    margin: '10px 0',
-    padding: '10px',
+    padding: '15px',
     fontSize: '16px',
+    borderRadius: '5px',
     border: '1px solid #42454a',
-    borderRadius: '4px',
     backgroundColor: '#40444b',
     color: '#ffffff',
   },
   button: {
-    padding: '10px',
+    padding: '15px',
     fontSize: '16px',
     backgroundColor: '#7289da',
     color: 'white',
     border: 'none',
-    borderRadius: '4px',
+    borderRadius: '5px',
     cursor: 'pointer',
+    transition: 'background-color 0.3s',
+  },
+  buttonHover: {
+    backgroundColor: '#5b6dae',
   },
   error: {
     color: 'red',
@@ -117,6 +146,7 @@ const styles = {
   link: {
     color: '#7289da',
     cursor: 'pointer',
+    textDecoration: 'underline',
   },
 };
 
