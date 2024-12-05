@@ -1,15 +1,15 @@
 {
-  "name": "hermes-chat-server",
+  "name": "server",
   "version": "1.0.0",
   "main": "server.js",
   "scripts": {
-  "start": "node server/server.js",
-  "test": "echo \"Error: no test specified\" && exit 1"
-},
+    "start": "node server.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
   "keywords": [],
-  "author": "Your Name",
+  "author": "",
   "license": "ISC",
-  "description": "Backend server for Hermes chat application",
+  "description": "",
   "dependencies": {
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
@@ -18,8 +18,6 @@
     "express-async-handler": "^1.2.0",
     "mongoose": "^8.8.3",
     "multer": "^1.4.5-lts.1",
-    "socket.io": "^4.8.1",
-    "react-scripts": "^5.0.1"
-    
+    "socket.io": "^4.8.1"
   }
 }
