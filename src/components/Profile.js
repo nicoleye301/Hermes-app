@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
-import {useNavigate} from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 const port = 5003;
 const baseURL = `http://localhost:${port}`;
 
-const Profile = ({username}) => {
+const Profile = ({ username }) => {
   const [bio, setBio] = useState('');
   const [nickname, setNickname] = useState('');
   const [profilePicture, setProfilePicture] = useState('');
@@ -15,6 +15,9 @@ const Profile = ({username}) => {
   const [newBio, setNewBio] = useState('');
   const [newNickname, setNewNickname] = useState('');
   const [error, setError] = useState(null);
+  const [isChangingPicture, setIsChangingPicture] = useState(false);
+  const [newProfilePicture, setNewProfilePicture] = useState(null);
+  const [showOverlay, setShowOverlay] = useState(false);
 
   // Redirect to login page if not logged in
   const navigate = useNavigate();
@@ -28,7 +31,6 @@ const Profile = ({username}) => {
   const fetchUserProfile = useCallback(async () => {
     try {
       const response = await axios.get(`${baseURL}/user/${username}`);
-
       if (response.status === 200) {
         setBio(response.data.bio || '');
         setNickname(response.data.nickname || '');
@@ -94,11 +96,10 @@ const Profile = ({username}) => {
   };
 
   // Handle Profile Picture Upload
-  const handleProfilePictureChange = async (e) => {
-    const file = e.target.files[0];
-    if (file) {
+  const handleProfilePictureChange = async () => {
+    if (newProfilePicture) {
       const formData = new FormData();
-      formData.append('profilePicture', file);
+      formData.append('profilePicture', newProfilePicture);
 
       try {
         const response = await axios.put(`${baseURL}/user/${username}/profile-picture`, formData, {
@@ -109,6 +110,8 @@ const Profile = ({username}) => {
 
         if (response.data.success) {
           setProfilePicture(`${baseURL}${response.data.profilePicture}`);
+          setNewProfilePicture(null);
+          setShowOverlay(false);
           setError(null);
         } else {
           throw new Error('Failed to update profile picture. Please try again.');
@@ -122,54 +125,95 @@ const Profile = ({username}) => {
 
   return (
     <div style={styles.container}>
-      <h1>{username}'s Profile</h1>
-
-      {error && <div style={{ color: 'red', marginBottom: '10px' }}>{error}</div>}
-
-      <div style={styles.profilePictureContainer}>
-        <img
-          src={profilePicture}
-          alt="Profile"
-          style={styles.profilePicture}
-        />
-        <input type="file" onChange={handleProfilePictureChange} style={styles.fileInput} />
-      </div>
-
-      <div style={styles.section}>
-        <strong>Bio:</strong>
-        {isEditingBio ? (
-          <div>
-            <textarea
-              style={styles.textarea}
-              value={newBio}
-              onChange={(e) => setNewBio(e.target.value)}
-            />
-            <button style={styles.button} onClick={handleSaveBio}>Save</button>
-            <button style={styles.button} onClick={() => setIsEditingBio(false)}>Cancel</button>
+      <div style={styles.profileContainer}>
+        <div style={styles.cover}>
+          <div
+            style={styles.avatar}
+            onMouseEnter={() => setIsChangingPicture(true)}
+            onMouseLeave={() => setIsChangingPicture(false)}
+            onClick={() => setShowOverlay(true)}
+          >
+            <img src={profilePicture} alt="Profile" style={styles.profilePicture} />
+            {isChangingPicture && (
+              <div style={styles.changePictureText}>
+                Change Profile
+              </div>
+            )}
           </div>
-        ) : (
-          <p>{bio || 'No bio yet'}</p>
-        )}
-        {!isEditingBio && <button style={styles.button} onClick={handleEditBio}>Edit Bio</button>}
-      </div>
+        </div>
 
-      <div style={styles.section}>
-        <strong>Nickname:</strong>
-        {isEditingNickname ? (
-          <div>
-            <input
-              style={styles.input}
-              type="text"
-              value={newNickname}
-              onChange={(e) => setNewNickname(e.target.value)}
+        {showOverlay && (
+          <div style={styles.uploadOverlay}>
+            <h3 style={styles.uploadTitle}>Current Profile Picture</h3>
+            <img
+              src={newProfilePicture ? URL.createObjectURL(newProfilePicture) : profilePicture}
+              alt="Current Profile"
+              style={styles.overlayProfilePicture}
             />
-            <button style={styles.button} onClick={handleSaveNickname}>Save</button>
-            <button style={styles.button} onClick={() => setIsEditingNickname(false)}>Cancel</button>
+            <label style={styles.uploadLabel}>
+              Choose New Picture
+              <input
+                type="file"
+                style={styles.fileInput}
+                onChange={(e) => {
+                  setNewProfilePicture(e.target.files[0]);
+                }}
+              />
+            </label>
+            <button style={styles.uploadButton} onClick={handleProfilePictureChange}>
+              Confirm
+            </button>
+            <button style={styles.cancelButton} onClick={() => setShowOverlay(false)}>
+              Cancel
+            </button>
           </div>
-        ) : (
-          <p>{nickname || 'No nickname yet'}</p>
         )}
-        {!isEditingNickname && <button style={styles.button} onClick={handleEditNickname}>Edit Nickname</button>}
+
+        <div style={styles.profileDetails}>
+          <h1 style={styles.username}>{username}</h1>
+          {error && <div style={styles.error}>{error}</div>}
+
+          <div style={styles.bioContainer}>
+            <strong>Bio:</strong>
+            {isEditingBio ? (
+              <div>
+                <textarea
+                  style={styles.textarea}
+                  value={newBio}
+                  onChange={(e) => setNewBio(e.target.value)}
+                />
+                <button style={styles.button} onClick={handleSaveBio}>Save</button>
+                <button style={styles.button} onClick={() => setIsEditingBio(false)}>Cancel</button>
+              </div>
+            ) : (
+              <p style={styles.bioText}>{bio || 'No bio yet'}</p>
+            )}
+            {!isEditingBio && (
+              <button style={styles.button} onClick={handleEditBio}>Edit Bio</button>
+            )}
+          </div>
+
+          <div style={styles.nicknameContainer}>
+            <strong>Nickname:</strong>
+            {isEditingNickname ? (
+              <div>
+                <input
+                  style={styles.input}
+                  type="text"
+                  value={newNickname}
+                  onChange={(e) => setNewNickname(e.target.value)}
+                />
+                <button style={styles.button} onClick={handleSaveNickname}>Save</button>
+                <button style={styles.button} onClick={() => setIsEditingNickname(false)}>Cancel</button>
+              </div>
+            ) : (
+              <p style={styles.nicknameText}>{nickname || 'No nickname yet'}</p>
+            )}
+            {!isEditingNickname && (
+              <button style={styles.button} onClick={handleEditNickname}>Edit Nickname</button>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -177,64 +221,180 @@ const Profile = ({username}) => {
 
 const styles = {
   container: {
-    maxWidth: '600px',
-    margin: '50px auto',
-    textAlign: 'center',
-    fontFamily: 'Arial, sans-serif',
-    padding: '20px',
-    boxShadow: '0 4px 8px rgba(0, 0, 0, 0.2)',
-    borderRadius: '8px',
-    backgroundColor: '#2c2f33',
-    color: '#ffffff',
+    minHeight: '100vh',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    background: '#2c2f33',
+    padding: '2rem',
   },
-  profilePictureContainer: {
-    marginBottom: '20px',
+  profileContainer: {
+    width: '100%',
+    maxWidth: '800px',
+    borderRadius: '20px',
+    overflow: 'hidden',
+    backgroundColor: '#36393f',
+    boxShadow: '0 15px 35px rgba(0, 0, 0, 0.2), 0 5px 15px rgba(0, 0, 0, 0.1)',
+    position: 'relative',
+  },
+  cover: {
+    height: '200px',
+    background: 'linear-gradient(150deg, #7289da 20%, #5865f2 100%)',
+    position: 'relative',
+  },
+  avatar: {
+    width: '150px',
+    height: '150px',
+    borderRadius: '50%',
+    background: '#2c2f33',
+    overflow: 'hidden',
+    position: 'absolute',
+    bottom: '-75px',
+    left: '50%',
+    transform: 'translateX(-50%)',
+    boxShadow: '0 10px 20px rgba(0, 0, 0, 0.3)',
+    cursor: 'pointer',
   },
   profilePicture: {
+    width: '100%',
+    height: '100%',
+    objectFit: 'cover',
+  },
+  changePictureText: {
+    position: 'absolute',
+    bottom: '10px',
+    left: '50%',
+    transform: 'translateX(-50%)',
+    background: 'rgba(0, 0, 0, 0.7)',
+    color: '#ffffff',
+    padding: '5px 10px',
+    borderRadius: '5px',
+    fontSize: '0.9rem',
+  },
+  fileInput: {
+    display: 'none',
+  },
+  uploadLabel: {
+    cursor: 'pointer',
+    display: 'block',
+    margin: '1rem 0',
+    color: '#7289da',
+  },
+  uploadOverlay: {
+    position: 'fixed',
+    top: '50%',
+    left: '50%',
+    transform: 'translate(-50%, -50%)',
+    background: '#2c2f33',
+    padding: '2rem',
+    borderRadius: '10px',
+    boxShadow: '0 10px 30px rgba(0, 0, 0, 0.5)',
+    zIndex: 1000,
+    textAlign: 'center',
+  },
+  uploadTitle: {
+    color: '#ffffff',
+    marginBottom: '1rem',
+  },
+  overlayProfilePicture: {
     width: '150px',
     height: '150px',
     borderRadius: '50%',
     objectFit: 'cover',
+    marginBottom: '1rem',
   },
-  fileInput: {
-    marginTop: '10px',
+  uploadButton: {
+    padding: '10px 20px',
+    margin: '5px',
+    border: 'none',
+    borderRadius: '5px',
+    background: '#5865f2',
+    color: '#ffffff',
+    cursor: 'pointer',
+  },
+  cancelButton: {
+    padding: '10px 20px',
+    margin: '5px',
+    border: 'none',
+    borderRadius: '5px',
+    background: '#ff5555',
+    color: '#ffffff',
+    cursor: 'pointer',
+  },
+  profileDetails: {
+    paddingTop: '100px',
+    paddingBottom: '2rem',
+    textAlign: 'center',
+    color: '#ffffff',
+  },
+  username: {
+    fontSize: '2rem',
+    color: '#ffffff',
+    marginBottom: '1rem',
+  },
+  error: {
+    color: '#ff5555',
+    marginBottom: '10px',
+  },
+  bioContainer: {
+    marginTop: '2rem',
+  },
+  bioText: {
+    padding: '0.5rem 1rem',
+    background: '#42454a',
+    borderRadius: '10px',
+    marginBottom: '1rem',
+    lineHeight: '1.5',
+    maxWidth: '600px',
+    margin: '0 auto',
+    overflowWrap: 'break-word',
+    color: '#b9bbbe',
+  },
+  nicknameContainer: {
+    marginTop: '2rem',
+  },
+  nicknameText: {
+    padding: '0.5rem 1rem',
+    background: '#42454a',
+    borderRadius: '10px',
+    marginBottom: '1rem',
+    lineHeight: '1.5',
+    maxWidth: '600px',
+    margin: '0 auto',
+    overflowWrap: 'break-word',
+    color: '#b9bbbe',
+  },
+  textarea: {
+    width: '100%',
+    maxWidth: '600px',
+    minHeight: '100px',
+    padding: '10px',
+    marginBottom: '1rem',
+    borderRadius: '10px',
+    border: '1px solid #555555',
+    backgroundColor: '#2c2f33',
+    color: '#ffffff',
+    resize: 'none',
+  },
+  input: {
+    width: '100%',
+    maxWidth: '600px',
+    padding: '10px',
+    marginBottom: '1rem',
+    borderRadius: '10px',
+    border: '1px solid #555555',
+    backgroundColor: '#2c2f33',
     color: '#ffffff',
   },
   button: {
-    padding: '10px',
-    fontSize: '16px',
-    backgroundColor: '#7289da',
-    color: 'white',
+    padding: '10px 20px',
+    margin: '5px',
     border: 'none',
-    borderRadius: '4px',
+    borderRadius: '5px',
+    background: '#5865f2',
+    color: '#ffffff',
     cursor: 'pointer',
-    marginTop: '10px',
-    marginRight: '10px',
-  },
-  section: {
-    margin: '20px 0',
-    textAlign: 'left',
-  },
-  input: {
-    padding: '8px',
-    fontSize: '16px',
-    border: '1px solid #42454a',
-    borderRadius: '4px',
-    width: '100%',
-    marginBottom: '10px',
-    backgroundColor: '#40444b',
-    color: '#ffffff',
-  },
-  textarea: {
-    padding: '8px',
-    fontSize: '16px',
-    border: '1px solid #42454a',
-    borderRadius: '4px',
-    width: '100%',
-    marginBottom: '10px',
-    minHeight: '100px',
-    backgroundColor: '#40444b',
-    color: '#ffffff',
+    transition: 'background 0.3s',
   },
 };
 

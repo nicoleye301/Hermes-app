@@ -17,6 +17,8 @@ function Chat({ username }) {
   const [isTyping, setIsTyping] = useState(null);
   const [notifications, setNotifications] = useState({});
   const [hoveredMessageId, setHoveredMessageId] = useState(null);
+  const [isBubbleOpen, setIsBubbleOpen] = useState(false);
+  const [friendProfile, setFriendProfile] = useState(null);
 
   // Reference to the messages container
   const messagesContainerRef = useRef(null);
@@ -40,12 +42,18 @@ function Chat({ username }) {
 
       // Listen for incoming messages
       socket.on('receiveMessage', (newMessage) => {
-        setMessages((prevMessages) => {
-          if (!prevMessages.find((msg) => msg._id === newMessage._id)) {
-            return [...prevMessages, newMessage];
-          }
-          return prevMessages;
-        });
+        // Filter messages based on the selected friend
+        if (
+          (newMessage.sender === selectedFriend && newMessage.receiver === username) ||
+          (newMessage.sender === username && newMessage.receiver === selectedFriend)
+        ) {
+          setMessages((prevMessages) => {
+            if (!prevMessages.find((msg) => msg._id === newMessage._id)) {
+              return [...prevMessages, newMessage];
+            }
+            return prevMessages;
+          });
+        }
 
         // Update notifications if the message is for the current user but not in the current chat
         if (newMessage.receiver === username && newMessage.sender !== selectedFriend) {
@@ -71,9 +79,14 @@ function Chat({ username }) {
       });
 
       // Handle typing indicators
-      socket.on(`typing-${username}`, ({ sender }) => setIsTyping(sender));
+      socket.on(`typing-${username}`, ({ sender }) => {
+        if (sender === selectedFriend) {
+          setIsTyping(sender);
+        }
+      });
+
       socket.on(`stopTyping-${username}`, ({ sender }) => {
-        if (isTyping === sender) {
+        if (sender === selectedFriend) {
           setIsTyping(null);
         }
       });
@@ -139,12 +152,16 @@ function Chat({ username }) {
     }
   }, [selectedFriend, username]);
 
-  // Scroll to the bottom of the messages container when messages change
-  useEffect(() => {
-    if (messagesContainerRef.current) {
-      messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+  // Fetch friend's profile when clicking the "View Profile" button
+  const openFriendProfile = async () => {
+    try {
+      const response = await axios.get(`http://localhost:${port}/user/${selectedFriend}`);
+      setFriendProfile(response.data);
+      setIsBubbleOpen(true);
+    } catch (error) {
+      console.error('Error fetching friend profile:', error);
     }
-  }, [messages, isTyping]);
+  };
 
   // Send message
   const sendMessage = () => {
@@ -230,17 +247,17 @@ function Chat({ username }) {
               />
               <div style={styles.friendInfo}>
                 <span>{friend.username}</span>
+                {notifications[friend.username] > 0 && (
+                  <div style={styles.notificationBubble}>
+                    {notifications[friend.username]}
+                  </div>
+                )}
                 <br />
                 <span style={styles.timestamp}>
                   {friend.lastMessageTimestamp
-                    ? formatFullDateTime(friend.lastMessageTimestamp)
+                    ? new Date(friend.lastMessageTimestamp).toLocaleString()
                     : 'No messages yet'}
                 </span>
-                {notifications[friend.username] > 0 && (
-                  <span style={styles.notificationBadge}>
-                    {notifications[friend.username]}
-                  </span>
-                )}
               </div>
             </li>
           ))}
@@ -249,7 +266,12 @@ function Chat({ username }) {
       <div style={styles.chatWindow}>
         {selectedFriend ? (
           <>
-            <h2>Chat with {selectedFriend}</h2>
+            <div style={styles.chatHeader}>
+              <h2>Chat with {selectedFriend}</h2>
+              <button onClick={openFriendProfile} style={styles.viewProfileButton}>
+                View Profile
+              </button>
+            </div>
             <div style={styles.messagesContainer} ref={messagesContainerRef}>
               <div style={styles.messages}>
                 {messages.map((msg, index) => (
@@ -307,6 +329,23 @@ function Chat({ username }) {
           <h2>Select a friend to start chatting</h2>
         )}
       </div>
+
+      {/* Central Overlay for showing friend profile */}
+      {isBubbleOpen && friendProfile && (
+        <div style={styles.profileOverlay}>
+          <div style={styles.profileOverlayContent}>
+            <h2>{friendProfile.username}</h2>
+            <img
+              src={`http://localhost:${port}${friendProfile.profilePicture}`}
+              alt="Profile"
+              style={styles.profilePictureExtraLarge}
+            />
+            <p style={styles.profileText}><strong>Bio:</strong> {friendProfile.bio || 'No bio available'}</p>
+            <p style={styles.profileText}><strong>Nickname:</strong> {friendProfile.nickname || 'No nickname available'}</p>
+            <button onClick={() => setIsBubbleOpen(false)} style={styles.closeOverlayButton}>Close</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -330,6 +369,22 @@ const styles = {
     color: '#ffffff',
     display: 'flex',
     flexDirection: 'column',
+    position: 'relative',
+  },
+  chatHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: '10px',
+  },
+  viewProfileButton: {
+    padding: '8px 12px',
+    backgroundColor: '#4e5d94',
+    color: '#ffffff',
+    border: 'none',
+    borderRadius: '15px',
+    cursor: 'pointer',
+    transition: 'background-color 0.3s',
   },
   friendList: {
     listStyle: 'none',
@@ -354,16 +409,26 @@ const styles = {
     borderRadius: '50%',
     marginRight: '10px',
   },
-  notificationBadge: {
-    position: 'absolute',
-    right: '10px',
-    top: '10px',
-    backgroundColor: '#7289da',
+  profilePictureExtraLarge: {
+    width: '180px',
+    height: '180px',
+    borderRadius: '50%',
+    marginBottom: '20px',
+  },
+  notificationBubble: {
+    backgroundColor: '#ff5555',
     color: '#ffffff',
     borderRadius: '50%',
-    padding: '5px 8px',
-    fontSize: '12px',
-    fontWeight: 'bold',
+    padding: '5px 10px',
+    fontSize: '0.8em',
+    position: 'absolute',
+    top: '-5px',
+    right: '-10px',
+    zIndex: 1,
+  },
+  timestamp: {
+    fontSize: '0.8em',
+    color: '#99aab5',
   },
   messagesContainer: {
     flexGrow: 1,
@@ -454,6 +519,43 @@ const styles = {
     color: '#ff5555',
     cursor: 'pointer',
     fontSize: '14px',
+  },
+  profileOverlay: {
+    position: 'fixed',
+    top: '50%',
+    left: '50%',
+    transform: 'translate(-50%, -50%)',
+    width: '600px',
+    maxHeight: '80vh',
+    overflowY: 'auto',
+    padding: '40px',
+    backgroundColor: '#2c2f33',
+    color: '#ffffff',
+    borderRadius: '15px',
+    boxShadow: '0px 0px 25px rgba(0, 0, 0, 0.6)',
+    zIndex: 1000,
+    textAlign: 'center',
+  },
+  profileOverlayContent: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+  },
+  profileText: {
+    textAlign: 'center',
+    marginBottom: '15px',
+    maxWidth: '90%',
+    overflowWrap: 'break-word',
+    color: '#b9bbbe',
+  },
+  closeOverlayButton: {
+    padding: '10px 20px',
+    backgroundColor: '#ff5555',
+    color: '#ffffff',
+    border: 'none',
+    borderRadius: '5px',
+    cursor: 'pointer',
+    marginTop: '15px',
   },
 };
 

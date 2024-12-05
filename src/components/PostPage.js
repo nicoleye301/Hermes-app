@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import {useNavigate} from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 const port = 5003;
 const baseURL = `http://localhost:${port}`;
@@ -59,7 +59,7 @@ function PostPage({ username }) {
           username,
           content: newPost,
           createdAt: new Date(),
-          profilePicture: profilePicture, // Use the current profile picture
+          profilePicture: profilePicture,
         };
 
         // Add the new post at the top of the list
@@ -74,29 +74,41 @@ function PostPage({ username }) {
   return (
     <div style={styles.container}>
       <div style={styles.newPostContainer}>
-        <textarea
-          placeholder="What's on your mind?"
-          value={newPost}
-          onChange={(e) => setNewPost(e.target.value)}
-          style={styles.textarea}
+        <img
+          src={`http://localhost:${port}${profilePicture}`}
+          alt="Profile"
+          style={styles.newPostProfilePicture}
         />
-        <button onClick={handleAddPost} style={styles.button}>
-          Post
-        </button>
+        <div style={styles.newPostInputWrapper}>
+          <textarea
+            placeholder="What's on your mind?"
+            value={newPost}
+            onChange={(e) => setNewPost(e.target.value)}
+            style={styles.textarea}
+          />
+          <button onClick={handleAddPost} style={styles.button}>
+            Post
+          </button>
+        </div>
       </div>
+
       <div style={styles.postsContainer}>
         {posts.map((post, index) => (
-          <div key={index} style={styles.post}>
+          <div key={index} style={styles.postCard}>
             <div style={styles.postHeader}>
               <img
                 src={`http://localhost:${port}${post.profilePicture || '/uploads/profile-pictures/default.jpg'}`}
                 alt="Profile"
                 style={styles.postProfilePicture}
               />
-              <strong>{post.username}</strong>
+              <div style={styles.postUserInfo}>
+                <strong style={styles.username}>{post.username}</strong>
+                <small style={styles.timestamp}>{new Date(post.createdAt).toLocaleString()}</small>
+              </div>
             </div>
-            <p>{post.content}</p>
-            <small>{new Date(post.createdAt).toLocaleString()}</small>
+            <div style={styles.postContent}>
+              <p style={styles.postText}>{post.content}</p>
+            </div>
           </div>
         ))}
       </div>
@@ -109,28 +121,46 @@ const styles = {
     padding: '20px',
     backgroundColor: '#36393f',
     color: '#ffffff',
-    height: '100%',
+    minHeight: '100vh',
     overflowY: 'auto',
   },
   newPostContainer: {
     display: 'flex',
+    alignItems: 'flex-start',
+    marginBottom: '30px',
+    padding: '20px',
+    backgroundColor: '#2c2f33',
+    borderRadius: '15px',
+    boxShadow: '0 4px 8px rgba(0, 0, 0, 0.2)',
+  },
+  newPostProfilePicture: {
+    width: '50px',
+    height: '50px',
+    borderRadius: '50%',
+    marginRight: '15px',
+  },
+  newPostInputWrapper: {
+    flex: 1,
+    display: 'flex',
     flexDirection: 'column',
-    marginBottom: '20px',
   },
   textarea: {
-    padding: '10px',
-    borderRadius: '5px',
+    width: '100%',
+    padding: '15px',
+    borderRadius: '8px',
     border: '1px solid #42454a',
     backgroundColor: '#40444b',
     color: '#ffffff',
     marginBottom: '10px',
-    minHeight: '60px',
+    minHeight: '80px',
+    fontSize: '1rem',
+    resize: 'none',
   },
   button: {
     alignSelf: 'flex-end',
     padding: '10px 20px',
     backgroundColor: '#7289da',
-    color: 'white',
+    color: '#ffffff',
     border: 'none',
     borderRadius: '5px',
     cursor: 'pointer',
@@ -140,21 +170,45 @@ const styles = {
     flexDirection: 'column',
     gap: '20px',
   },
-  post: {
+  postCard: {
     padding: '20px',
-    borderRadius: '10px',
+    borderRadius: '15px',
     backgroundColor: '#2c2f33',
+    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)',
+    transition: 'transform 0.2s',
+  },
+  postCardHover: {
+    transform: 'scale(1.02)',
   },
   postHeader: {
     display: 'flex',
     alignItems: 'center',
-    marginBottom: '10px',
+    marginBottom: '15px',
   },
   postProfilePicture: {
-    width: '40px',
-    height: '40px',
+    width: '50px',
+    height: '50px',
     borderRadius: '50%',
-    marginRight: '10px',
+    marginRight: '15px',
+  },
+  postUserInfo: {
+    display: 'flex',
+    flexDirection: 'column',
+  },
+  username: {
+    fontSize: '1.2rem',
+    color: '#ffffff',
+  },
+  timestamp: {
+    fontSize: '0.9rem',
+    color: '#99aab5',
+  },
+  postContent: {
+    marginTop: '10px',
+  },
+  postText: {
+    fontSize: '1.1rem',
+    lineHeight: '1.6',
   },
 };
 

@@ -111,76 +111,87 @@ function FriendList({ username }) {
 
   return (
     <div style={styles.container}>
-      <h1>Friend List</h1>
-      <form onSubmit={handleSendFriendRequest} style={styles.form}>
-        {error && <p style={styles.error}>{error}</p>}
-        {success && <p style={styles.success}>{success}</p>}
-        <input
-          type="text"
-          placeholder="Enter friend's username"
-          value={friendUsername}
-          onChange={(e) => setFriendUsername(e.target.value)}
-          required
-          style={styles.input}
-        />
-        <button type="submit" style={styles.button}>Send Friend Request</button>
-      </form>
-      <h2>Your Friends:</h2>
-      <ul style={styles.friendList}>
-        {friends.map((friend) => (
-          <li key={friend._id} style={styles.friendItem}>
-            <img
-              src={`http://localhost:${port}${friend.profilePicture}`}
-              alt="Profile"
-              style={styles.profilePicture}
-            />
-            <div>
-              <span>{friend.username}</span>
-              {friend.lastMessageTimestamp && (
-                <div style={styles.timestamp}>
-                  Last message: {new Date(friend.lastMessageTimestamp).toLocaleString()}
+      <div style={styles.formContainer}>
+        <h1>Friend List</h1>
+        <form onSubmit={handleSendFriendRequest} style={styles.form}>
+          {error && <p style={styles.error}>{error}</p>}
+          {success && <p style={styles.success}>{success}</p>}
+          <input
+            type="text"
+            placeholder="Enter friend's username"
+            value={friendUsername}
+            onChange={(e) => setFriendUsername(e.target.value)}
+            required
+            style={styles.input}
+          />
+          <button type="submit" style={styles.button}>Send Friend Request</button>
+        </form>
+      </div>
+      
+      <div style={styles.splitContainer}>
+        <div style={styles.section}>
+          <h2>Your Friends</h2>
+          <ul style={styles.friendList}>
+            {friends.map((friend) => (
+              <li key={friend._id} style={styles.friendItem}>
+                <img
+                  src={`http://localhost:${port}${friend.profilePicture}`}
+                  alt="Profile"
+                  style={styles.profilePicture}
+                />
+                <div style={styles.friendInfo}>
+                  <span style={styles.friendName}>{friend.username}</span>
+                  {friend.lastMessageTimestamp && (
+                    <div style={styles.timestamp}>
+                      Last message: {new Date(friend.lastMessageTimestamp).toLocaleString()}
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
-          </li>
-        ))}
-      </ul>
-      <h2>Friend Requests:</h2>
-      <ul style={styles.friendList}>
-        {friendRequests.map((request) => (
-          <li key={request._id} style={styles.friendItem}>
-            <img
-              src={`http://localhost:${port}${request.profilePicture}`}
-              alt="Profile"
-              style={styles.profilePicture}
-            />
-            {request.username}
-            <div style={styles.requestButtons}>
-              <button
-                onClick={() => handleAcceptFriendRequest(request.username)}
-                style={styles.acceptButton}
-              >
-                Accept
-              </button>
-              <button
-                onClick={() => handleRejectFriendRequest(request.username)}
-                style={styles.rejectButton}
-              >
-                Reject
-              </button>
-            </div>
-          </li>
-        ))}
-      </ul>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <div style={styles.section}>
+          <h2>Friend Requests</h2>
+          <ul style={styles.friendList}>
+            {friendRequests.map((request) => (
+              <li key={request._id} style={styles.friendItem}>
+                <img
+                  src={`http://localhost:${port}${request.profilePicture}`}
+                  alt="Profile"
+                  style={styles.profilePicture}
+                />
+                <div style={styles.friendInfo}>
+                  <span style={styles.friendName}>{request.username}</span>
+                  <div style={styles.requestButtons}>
+                    <button
+                      onClick={() => handleAcceptFriendRequest(request.username)}
+                      style={styles.acceptButton}
+                    >
+                      Accept
+                    </button>
+                    <button
+                      onClick={() => handleRejectFriendRequest(request.username)}
+                      style={styles.rejectButton}
+                    >
+                      Reject
+                    </button>
+                  </div>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
     </div>
   );
 }
 
 const styles = {
   container: {
-    maxWidth: '400px',
+    maxWidth: '1200px',
     margin: '50px auto',
-    textAlign: 'center',
     fontFamily: 'Arial, sans-serif',
     padding: '20px',
     boxShadow: '0 4px 8px rgba(0, 0, 0, 0.2)',
@@ -188,9 +199,14 @@ const styles = {
     backgroundColor: '#2c2f33',
     color: '#ffffff',
   },
+  formContainer: {
+    textAlign: 'center',
+    marginBottom: '40px',
+  },
   form: {
     display: 'flex',
     flexDirection: 'column',
+    alignItems: 'center',
   },
   input: {
     margin: '10px 0',
@@ -200,9 +216,11 @@ const styles = {
     borderRadius: '4px',
     backgroundColor: '#40444b',
     color: '#ffffff',
+    width: '80%',
+    maxWidth: '400px',
   },
   button: {
-    padding: '10px',
+    padding: '10px 20px',
     fontSize: '16px',
     backgroundColor: '#7289da',
     color: 'white',
@@ -210,33 +228,54 @@ const styles = {
     borderRadius: '4px',
     cursor: 'pointer',
   },
+  splitContainer: {
+    display: 'flex',
+    gap: '20px',
+    justifyContent: 'space-between',
+  },
+  section: {
+    flex: 1,
+    padding: '20px',
+    backgroundColor: '#36393f',
+    borderRadius: '8px',
+    boxShadow: '0 4px 8px rgba(0, 0, 0, 0.2)',
+  },
   friendList: {
     listStyle: 'none',
     padding: 0,
     marginTop: '20px',
   },
   friendItem: {
-    padding: '10px',
-    backgroundColor: '#36393f',
-    margin: '5px 0',
-    borderRadius: '4px',
+    padding: '15px',
+    backgroundColor: '#42454a',
+    marginBottom: '10px',
+    borderRadius: '8px',
     display: 'flex',
     alignItems: 'center',
     color: '#ffffff',
   },
   profilePicture: {
-    width: '30px',
-    height: '30px',
+    width: '50px',
+    height: '50px',
     borderRadius: '50%',
-    marginRight: '10px',
+    marginRight: '15px',
+  },
+  friendInfo: {
+    flexGrow: 1,
+  },
+  friendName: {
+    fontWeight: 'bold',
+    fontSize: '1.1em',
   },
   requestButtons: {
+    marginTop: '10px',
     display: 'flex',
     gap: '10px',
   },
   timestamp: {
     fontSize: '12px',
     color: '#99aab5',
+    marginTop: '5px',
   },
   acceptButton: {
     padding: '5px 10px',
