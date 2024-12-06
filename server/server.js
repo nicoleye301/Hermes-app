@@ -532,6 +532,79 @@ app.put('/user/:username/password', async (req, res) => {
   }
 });
 
+app.delete('/user/:username', async (req, res) => {
+  const { username } = req.params;
+
+  try {
+    // Find and delete the user
+    const user = await User.findOneAndDelete({ username });
+
+    if (!user) {
+      console.error(`User not found for username: ${username}`);
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    // Delete all related messages (sent or received)
+    try {
+      await Message.deleteMany({ $or: [{ sender: username }, { receiver: username }] });
+      console.log(`Deleted all messages for user: ${username}`);
+    } catch (messageError) {
+      console.error(`Failed to delete messages for user ${username}:`, messageError);
+    }
+
+    // Delete all posts by the user
+    try {
+      await Post.deleteMany({ username });
+      console.log(`Deleted all posts for user: ${username}`);
+    } catch (postError) {
+      console.error(`Failed to delete posts for user ${username}:`, postError);
+    }
+
+    // Remove user from friends list of their friends
+    try {
+      await User.updateMany(
+        { friends: user._id },
+        { $pull: { friends: user._id } }
+      );
+      console.log(`Removed user ${username} from friends lists of their friends`);
+    } catch (friendError) {
+      console.error(`Failed to remove user ${username} from friends lists:`, friendError);
+    }
+
+    // Remove user from friend requests list of other users
+    try {
+      await User.updateMany(
+        { friendRequests: user._id },
+        { $pull: { friendRequests: user._id } }
+      );
+      console.log(`Removed user ${username} from friend requests of other users`);
+    } catch (friendRequestError) {
+      console.error(`Failed to remove user ${username} from friend requests:`, friendRequestError);
+    }
+
+    // Remove user's profile picture from the filesystem if not the default one
+    if (user.profilePicture && user.profilePicture !== '/uploads/profile-pictures/default.jpg') {
+      const profilePicturePath = path.join(__dirname, user.profilePicture);
+      if (fs.existsSync(profilePicturePath)) {
+        fs.unlink(profilePicturePath, (err) => {
+          if (err) {
+            console.error('Failed to delete profile picture:', err);
+          } else {
+            console.log('Profile picture deleted successfully');
+          }
+        });
+      } else {
+        console.log('Profile picture not found, skipping deletion');
+      }
+    }
+
+    res.status(200).json({ success: true, message: 'Account deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting account:', error);
+    res.status(500).json({ success: false, message: 'Failed to delete account', error: error.message });
+  }
+});
+
 // Socket.IO for Real-Time Chat
 io.on('connection', (socket) => {
   console.log('New client connected:', socket.id);
