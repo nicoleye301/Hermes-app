@@ -1,0 +1,27 @@
+version: '3.8'
+services:
+  server:
+    build: .
+    working_dir: /app/server
+    command: ["node", "server.js"]
+    ports:
+      - "5003:5003"  # Maps port 5003 of the host to port 5003 of the container
+    environment:
+      MONGODB_URI: mongodb://mongo:27017/hermes_db
+      CLOUDINARY_CLOUD_NAME: <cloud_name>
+      CLOUDINARY_API_KEY: <api_key>
+      CLOUDINARY_API_SECRET: <api_secret>
+    depends_on:
+      - mongo
+    volumes:
+      - .:/app  # Mounts the project directory in the container for development
+
+  mongo:
+    image: mongo:5
+    ports:
+      - "27017:27017"  # Exposes MongoDB on default port 27017
+    volumes:
+      - mongo_data:/data/db
+
+volumes:
+  mongo_data:
