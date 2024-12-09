@@ -46,9 +46,9 @@ function Chat({ username }) {
         (newMessage.groupId === selectedChat)
     ) {
       setMessages((prevMessages) => {
-        // if (!prevMessages.find((msg) => msg._id === newMessage._id)) {
-        //   return [...prevMessages, newMessage];
-        // }
+        if (prevMessages.find((msg) => msg._id === newMessage.id)) {
+          return prevMessages;
+        }
         return [...prevMessages, newMessage];
       });
     }

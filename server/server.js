@@ -782,6 +782,7 @@ io.on('connection', (socket) => {
         sender,
         content,
         groupId,
+        id: newGroupMessage._id,
         timestamp: new Date(),
       };
 
