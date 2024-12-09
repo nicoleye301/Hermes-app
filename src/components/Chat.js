@@ -155,18 +155,33 @@ function Chat({ username }) {
   // Fetch chat history when a friend is selected
   useEffect(() => {
     if (selectedChat) {
-      const fetchMessages = async () => {
-        try {
-          const response = await axios.get(`${baseURL}/messages/${username}/${selectedChat}`);
-          setMessages(response.data);
-          setNotifications((prev) => ({ ...prev, [selectedChat]: 0 }));
-        } catch (error) {
-          console.error('Error fetching messages:', error);
-        }
-      };
-      fetchMessages();
+      if(chatType === 'individual'){
+        const fetchMessages = async () => {
+          try {
+            const response = await axios.get(`${baseURL}/messages/${username}/${selectedChat}`);
+            setMessages(response.data);
+            setNotifications((prev) => ({ ...prev, [selectedChat]: 0 }));
+          } catch (error) {
+            console.error('Error fetching messages:', error);
+          }
+        };
+        fetchMessages();
+      }
+      else if(chatType === 'group') {
+        // Fetch group messages
+        const fetchGroupMessages = async () => {
+          try {
+            const response = await axios.get(`${baseURL}/group-messages/${selectedChat}`);
+            setMessages(response.data);
+            // TODO: Update notifications for group messages
+          } catch (error) {
+            console.error('Error fetching group messages:', error);
+          }
+        };
+        fetchGroupMessages();
+      }
     }
-  }, [selectedChat, username]);
+  }, [chatType, selectedChat, username]);
 
   const createGroup = async (groupName, members) => {
     try {
