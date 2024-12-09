@@ -89,7 +89,7 @@ function GroupChat({ username }) {
         content: message,
       };
       socket.emit('sendGroupMessage', messageData);
-      setMessages(prevMessages => [...prevMessages, messageData]); // Display the message instantly on the UI
+      //setMessages(prevMessages => [...prevMessages, messageData]); // Display the message instantly on the UI
       setMessage('');
     }
   };
