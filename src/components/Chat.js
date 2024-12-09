@@ -40,17 +40,16 @@ function Chat({ username }) {
 
   const handleReceiveMessage = (newMessage)=> {
     // Filter messages based on the selected friend
-    alert('new message received');
     if (
         (newMessage.sender === selectedChat && newMessage.receiver === username) ||
         (newMessage.sender === username && newMessage.receiver === selectedChat) ||
         (newMessage.groupId === selectedChat)
     ) {
       setMessages((prevMessages) => {
-        if (!prevMessages.find((msg) => msg._id === newMessage._id)) {
-          return [...prevMessages, newMessage];
-        }
-        return prevMessages;
+        // if (!prevMessages.find((msg) => msg._id === newMessage._id)) {
+        //   return [...prevMessages, newMessage];
+        // }
+        return [...prevMessages, newMessage];
       });
     }
 
