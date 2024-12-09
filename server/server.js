@@ -390,6 +390,19 @@ app.get('/user/:username', async (req, res) => {
   }
 });
 
+app.get('/groups/:username', async (req, res) => {
+    const { username } = req.params;
+    console.log('Fetching groups for user:', username);
+    const thisUser = await User.findOne({ username: username });
+    try {
+        const groups = await Group.find( {members: { $in: [thisUser._id] }});
+        res.json(groups);
+    } catch (error) {
+        res.status(500).json({ message: 'Error fetching groups', error });
+    }
+});
+
+
 // Create a new group
 app.post('/create-group', async (req, res) => {
   const { groupName, members } = req.body;

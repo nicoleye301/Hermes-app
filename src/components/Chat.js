@@ -2,6 +2,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { useNavigate } from "react-router-dom";
 import socket from '../utils/socket';
+import Modal from "react-modal";
+import Select from "react-select";
+const port = 5003;
 
 
 function Chat({ username }) {
@@ -15,9 +18,44 @@ function Chat({ username }) {
   const [typing, setTyping] = useState(false);
   const [isTyping, setIsTyping] = useState(null);
   const [notifications, setNotifications] = useState({});
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [newGroupName, setNewGroupName] = useState('');
+  const [selectedFriends, setSelectedFriends] = useState([]);
+
 
   // Reference to the messages container
   const messagesContainerRef = useRef(null);
+
+  const createGroup = async (groupName, members) => {
+    try {
+      const response = await axios.post(`http://localhost:${port}/create-group`, {
+        groupName,
+        members,
+      });
+      setGroups(prevGroups => [...prevGroups, response.data]);
+    } catch (error) {
+      console.error('Error creating group:', error);
+      throw error;
+    }
+  };
+
+  const handleCreateGroup = async () => {
+    if (newGroupName && selectedFriends.length) {
+      const memberUsernames = selectedFriends.map(friend => friend.value);
+      try {
+        await createGroup(newGroupName, [username, ...memberUsernames]);
+        setIsModalOpen(false);
+        setNewGroupName('');
+        setSelectedFriends([]);
+        await fetchFriendsAndGroups(username); // Fetch the updated group list after group creation
+      } catch (error) {
+        console.error('Error creating group:', error);
+        alert('Error creating group. Please try again.');
+      }
+    } else {
+      alert('Please provide a group name and select at least one friend.');
+    }
+  };
 
   // Redirect to login page if not logged in
   const navigate = useNavigate();
@@ -40,20 +78,21 @@ function Chat({ username }) {
     fetchUserProfile();
   }, [username]);
 
+  const fetchFriendsAndGroups = async (username) => {
+    try {
+      const responseFriends = await axios.get(`http://localhost:5003/friends/${username}`);
+      setFriends(responseFriends.data);
+
+      const responseGroups = await axios.get(`http://localhost:5003/groups/${username}`);
+      setGroups(responseGroups.data);
+    } catch (error) {
+      console.error('Error fetching friends or groups:', error);
+    }
+  };
+
   // Fetch friend list and group list on load
   useEffect(() => {
-    const fetchFriendsAndGroups = async () => {
-      try {
-        const responseFriends = await axios.get(`http://localhost:5003/friends/${username}`);
-        setFriends(responseFriends.data);
-
-        const responseGroups = await axios.get(`http://localhost:5003/groups/${username}`);
-        setGroups(responseGroups.data);
-      } catch (error) {
-        console.error('Error fetching friends or groups:', error);
-      }
-    };
-    fetchFriendsAndGroups();
+    fetchFriendsAndGroups(username);
   }, [username]);
 
   // Fetch chat history when an individual or group chat is selected
@@ -185,47 +224,84 @@ function Chat({ username }) {
     <div style={styles.container}>
       <div style={styles.sidebar}>
         <h2>Your Friends</h2>
+        <button onClick={() => setIsModalOpen(true)} style={styles.createGroupButton}>
+          Create Group
+        </button>
+
         <ul style={styles.friendList}>
           {friends.map((friend) => (
-            <li
-              key={friend.username}
-              style={styles.friendItem(selectedChat === friend.username)}
-              onClick={() => {
-                setSelectedChat(friend.username);
-                setChatType('individual');
-              }}
-            >
-              <img
-                src={`http://localhost:5003${friend.profilePicture}`}
-                alt="Profile"
-                style={styles.profilePicture}
-              />
-              <div style={styles.friendInfo}>
-                <span>{friend.username}</span>
-                {notifications[friend.username] > 0 && (
-                  <span style={styles.notificationBadge}>
+              <li
+                  key={friend.username}
+                  style={styles.friendItem(selectedChat === friend.username)}
+                  onClick={() => {
+                    setSelectedChat(friend.username);
+                    setChatType('individual');
+                  }}
+              >
+                <img
+                    src={`http://localhost:5003${friend.profilePicture}`}
+                    alt="Profile"
+                    style={styles.profilePicture}
+                />
+                <div style={styles.friendInfo}>
+                  <span>{friend.username}</span>
+                  {notifications[friend.username] > 0 && (
+                      <span style={styles.notificationBadge}>
                     {notifications[friend.username]}
                   </span>
-                )}
-              </div>
-            </li>
+                  )}
+                </div>
+              </li>
           ))}
           {groups.map((group) => (
-            <li
-              key={group._id}
-              style={styles.friendItem(selectedChat === group._id)}
-              onClick={() => {
-                setSelectedChat(group._id);
-                setChatType('group');
-              }}
-            >
-              <div style={styles.friendInfo}>
-                <span>{group.groupName}</span>
-              </div>
-            </li>
+              <li
+                  key={group._id}
+                  style={styles.friendItem(selectedChat === group._id)}
+                  onClick={() => {
+                    setSelectedChat(group._id);
+                    setChatType('group');
+                  }}
+              >
+                <div style={styles.friendInfo}>
+                  <span>{group.groupName}</span>
+                </div>
+              </li>
           ))}
         </ul>
       </div>
+      {/* Create Group Modal */}
+      <Modal
+          isOpen={isModalOpen}
+          onRequestClose={() => setIsModalOpen(false)}
+          style={styles.modal}
+          contentLabel="Create Group"
+      >
+        <h2>Create a New Group</h2>
+        <input
+            type="text"
+            placeholder="Group Name"
+            value={newGroupName}
+            onChange={(e) => setNewGroupName(e.target.value)}
+            style={styles.modalInput}
+        />
+        <Select
+            isMulti
+            options={friends.map(friend => ({
+              value: friend.username,
+              label: friend.username,
+            }))}
+            styles={styles.select}
+            placeholder="Select Friends"
+            onChange={setSelectedFriends}
+            value={selectedFriends}
+        />
+        <button onClick={handleCreateGroup} style={styles.modalButton}>
+          Create Group
+        </button>
+        <button onClick={() => setIsModalOpen(false)} style={styles.modalButton}>
+          Cancel
+        </button>
+      </Modal>
       <div style={styles.chatWindow}>
         {selectedChat ? (
           <>
