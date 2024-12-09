@@ -569,6 +569,7 @@ socket.on('sendGroupMessage', async (messageData) => {
     const groupMessage = {
       sender,
       content,
+      groupId,
       timestamp: new Date(),
     };
 
