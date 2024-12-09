@@ -3,13 +3,16 @@ import io from 'socket.io-client';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import 'bootstrap-icons/font/bootstrap-icons.css';
+import Modal from "react-modal";
+import Select from "react-select";
 
 const baseURL = `https://hermes-backend-69ja.onrender.com`;
 let socket;
 
 function Chat({ username }) {
   const [friends, setFriends] = useState([]);
-  const [selectedFriend, setSelectedFriend] = useState(null);
+  const [groups, setGroups] = useState([]);
+  const [selectedChat, setSelectedChat] = useState(null);
   const [messages, setMessages] = useState([]);
   const [message, setMessage] = useState('');
   const [userProfilePicture, setUserProfilePicture] = useState('');
@@ -19,6 +22,10 @@ function Chat({ username }) {
   const [hoveredMessageId, setHoveredMessageId] = useState(null);
   const [isBubbleOpen, setIsBubbleOpen] = useState(false);
   const [friendProfile, setFriendProfile] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [newGroupName, setNewGroupName] = useState('');
+  const [selectedFriends, setSelectedFriends] = useState([]);
+  const [chatType, setChatType] = useState('individual'); // 'individual' or 'group'
 
   // Reference to the messages container
   const messagesContainerRef = useRef(null);
@@ -44,8 +51,8 @@ function Chat({ username }) {
       socket.on('receiveMessage', (newMessage) => {
         // Filter messages based on the selected friend
         if (
-          (newMessage.sender === selectedFriend && newMessage.receiver === username) ||
-          (newMessage.sender === username && newMessage.receiver === selectedFriend)
+          (newMessage.sender === selectedChat && newMessage.receiver === username) ||
+          (newMessage.sender === username && newMessage.receiver === selectedChat)
         ) {
           setMessages((prevMessages) => {
             if (!prevMessages.find((msg) => msg._id === newMessage._id)) {
@@ -56,7 +63,7 @@ function Chat({ username }) {
         }
 
         // Update notifications if the message is for the current user but not in the current chat
-        if (newMessage.receiver === username && newMessage.sender !== selectedFriend) {
+        if (newMessage.receiver === username && newMessage.sender !== selectedChat) {
           setNotifications((prev) => ({
             ...prev,
             [newMessage.sender]: (prev[newMessage.sender] || 0) + 1,
@@ -80,13 +87,13 @@ function Chat({ username }) {
 
       // Handle typing indicators
       socket.on(`typing-${username}`, ({ sender }) => {
-        if (sender === selectedFriend) {
+        if (sender === selectedChat) {
           setIsTyping(sender);
         }
       });
 
       socket.on(`stopTyping-${username}`, ({ sender }) => {
-        if (sender === selectedFriend) {
+        if (sender === selectedChat) {
           setIsTyping(null);
         }
       });
@@ -98,7 +105,7 @@ function Chat({ username }) {
         socket.off(`stopTyping-${username}`);
       };
     }
-  }, [username, selectedFriend, isTyping]);
+  }, [username, selectedChat, isTyping]);
 
   // Scroll to the bottom of the messages container when messages change
   useEffect(() => {
@@ -120,42 +127,79 @@ function Chat({ username }) {
     fetchUserProfile();
   }, [username]);
 
+  const fetchChats = async (username) => {
+    try {
+      // Fetch friend list
+      const response = await axios.get(`${baseURL}/friends/${username}`);
+      const sortedFriends = response.data.sort(
+          (a, b) => new Date(b.lastMessageTimestamp) - new Date(a.lastMessageTimestamp)
+      );
+      setFriends(sortedFriends);
+
+      // Fetch group list
+      // TODO: sort by date
+      const groupResponse = await axios.get(`${baseURL}/groups/${username}`);
+        setGroups(groupResponse.data);
+    } catch (error) {
+      console.error('Error fetching chats:', error);
+    }
+  };
   // Fetch friend list on load
   useEffect(() => {
-    const fetchFriends = async () => {
-      try {
-        const response = await axios.get(`${baseURL}/friends/${username}`);
-        const sortedFriends = response.data.sort(
-          (a, b) => new Date(b.lastMessageTimestamp) - new Date(a.lastMessageTimestamp)
-        );
-        setFriends(sortedFriends);
-      } catch (error) {
-        console.error('Error fetching friends:', error);
-      }
-    };
-    fetchFriends();
+    fetchChats(username);
   }, [username]);
 
   // Fetch chat history when a friend is selected
   useEffect(() => {
-    if (selectedFriend) {
+    if (selectedChat) {
       const fetchMessages = async () => {
         try {
-          const response = await axios.get(`${baseURL}/messages/${username}/${selectedFriend}`);
+          const response = await axios.get(`${baseURL}/messages/${username}/${selectedChat}`);
           setMessages(response.data);
-          setNotifications((prev) => ({ ...prev, [selectedFriend]: 0 }));
+          setNotifications((prev) => ({ ...prev, [selectedChat]: 0 }));
         } catch (error) {
           console.error('Error fetching messages:', error);
         }
       };
       fetchMessages();
     }
-  }, [selectedFriend, username]);
+  }, [selectedChat, username]);
+
+  const createGroup = async (groupName, members) => {
+    try {
+      const response = await axios.post(`${baseURL}/create-group`, {
+        groupName,
+        members,
+      });
+      setGroups(prevGroups => [...prevGroups, response.data]);
+    } catch (error) {
+      console.error('Error creating group:', error);
+      throw error;
+    }
+  };
+
+  const handleCreateGroup = async () => {
+    if (newGroupName && selectedFriends.length) {
+      const memberUsernames = selectedFriends.map(friend => friend.value);
+      try {
+        await createGroup(newGroupName, [username, ...memberUsernames]);
+        setIsModalOpen(false);
+        setNewGroupName('');
+        setSelectedFriends([]);
+        await fetchChats(username); // Fetch the updated group list after group creation
+      } catch (error) {
+        console.error('Error creating group:', error);
+        alert('Error creating group. Please try again.');
+      }
+    } else {
+      alert('Please provide a group name and select at least one friend.');
+    }
+  };
 
   // Fetch friend's profile when clicking the "View Profile" button
   const openFriendProfile = async () => {
     try {
-      const response = await axios.get(`${baseURL}/user/${selectedFriend}`);
+      const response = await axios.get(`${baseURL}/user/${selectedChat}`);
       setFriendProfile(response.data);
       setIsBubbleOpen(true);
     } catch (error) {
@@ -165,10 +209,9 @@ function Chat({ username }) {
 
   // Send message
   const sendMessage = () => {
-    if (message && selectedFriend) {
+    if (message && selectedChat) {
       const messageData = {
         sender: username,
-        receiver: selectedFriend,
         content: message,
         senderProfilePicture: userProfilePicture,
         timestamp: new Date().toISOString(),
@@ -176,7 +219,14 @@ function Chat({ username }) {
 
       // Emit the message through Socket.IO without updating UI immediately to avoid duplicates
       if (socket) {
-        socket.emit('sendMessage', messageData);
+        if(chatType === 'individual'){
+          messageData.receiver = selectedChat;
+          socket.emit('sendMessage', messageData);
+        }
+        else if(chatType === 'group'){
+          messageData.groupId = selectedChat;
+          socket.emit('sendGroupMessage', { messageData});
+        }
       }
       setMessage('');
     }
@@ -188,13 +238,23 @@ function Chat({ username }) {
 
     if (socket && !typing) {
       setTyping(true);
-      socket.emit('typing', { sender: username, receiver: selectedFriend });
+      if(chatType === 'individual'){
+        socket.emit('typing', { sender: username, receiver: selectedChat });
+      }
+      else if(chatType === 'group'){
+        socket.emit('typing', { sender: username});
+      }
     }
 
     setTimeout(() => {
       if (socket) {
         setTyping(false);
-        socket.emit('stopTyping', { sender: username, receiver: selectedFriend });
+        if(chatType === 'individual'){
+          socket.emit('stopTyping', { sender: username, receiver: selectedChat });
+        }
+        else if(chatType === 'group'){
+          socket.emit('stopTyping', { sender: username});
+        }
       }
     }, 1000);
   };
@@ -233,41 +293,62 @@ function Chat({ username }) {
     <div style={styles.container}>
       <div style={styles.sidebar}>
         <h2 style={styles.chatHeader}>Messages</h2>
+        {/*create group button*/}
+        <button onClick={() => setIsModalOpen(true)} style={styles.createGroupButton}>
+          Create Group
+        </button>
         <ul style={styles.friendList}>
           {friends.map((friend) => (
-            <li
-              key={friend.username}
-              style={styles.friendItem(selectedFriend === friend.username)}
-              onClick={() => setSelectedFriend(friend.username)}
-            >
-              <img
-                src={`${baseURL}${friend.profilePicture}`}
-                alt="Profile"
-                style={styles.profilePicture}
-              />
-              <div style={styles.friendInfo}>
-                <span>{friend.username}</span>
-                {notifications[friend.username] > 0 && (
-                  <div style={styles.notificationBubble}>
-                    {notifications[friend.username]}
-                  </div>
-                )}
-                <br />
-                <span style={styles.timestamp}>
+              <li
+                  key={friend.username}
+                  style={styles.friendItem(selectedChat === friend.username)}
+                  onClick={() => {
+                    setSelectedChat(friend.username);
+                    setChatType('individual');
+                  }}
+              >
+                <img
+                    src={`${baseURL}${friend.profilePicture}`}
+                    alt="Profile"
+                    style={styles.profilePicture}
+                />
+                <div style={styles.friendInfo}>
+                  <span>{friend.username}</span>
+                  {notifications[friend.username] > 0 && (
+                      <div style={styles.notificationBubble}>
+                        {notifications[friend.username]}
+                      </div>
+                  )}
+                  <br/>
+                  <span style={styles.timestamp}>
                   {friend.lastMessageTimestamp
-                    ? new Date(friend.lastMessageTimestamp).toLocaleString()
-                    : 'No messages yet'}
+                      ? new Date(friend.lastMessageTimestamp).toLocaleString()
+                      : 'No messages yet'}
                 </span>
-              </div>
-            </li>
+                </div>
+              </li>
+          ))}
+          {groups.map((group) => (
+              <li
+                  key={group._id}
+                  style={styles.friendItem(selectedChat === group._id)}
+                  onClick={() => {
+                    setSelectedChat(group._id);
+                    setChatType('group');
+                  }}
+              >
+                <div style={styles.friendInfo}>
+                  <span>{group.groupName}</span>
+                </div>
+              </li>
           ))}
         </ul>
       </div>
       <div style={styles.chatWindow}>
-        {selectedFriend ? (
-          <>
-            <div style={styles.chatHeader}>
-              <h2 style={styles.chatHeaderText}>{selectedFriend}</h2>
+        {selectedChat ? (
+            <>
+              <div style={styles.chatHeader}>
+              <h2 style={styles.chatHeaderText}>{selectedChat}</h2>
               <button onClick={openFriendProfile} style={styles.viewProfileButton}>
                 View Profile
               </button>
@@ -346,6 +427,40 @@ function Chat({ username }) {
           </div>
         </div>
       )}
+
+      {/* Create Group Modal */}
+      <Modal
+          isOpen={isModalOpen}
+          onRequestClose={() => setIsModalOpen(false)}
+          style={styles.modal}
+          contentLabel="Create Group"
+      >
+        <h2>Create a New Group</h2>
+        <input
+            type="text"
+            placeholder="Group Name"
+            value={newGroupName}
+            onChange={(e) => setNewGroupName(e.target.value)}
+            style={styles.modalInput}
+        />
+        <Select
+            isMulti
+            options={friends.map(friend => ({
+              value: friend.username,
+              label: friend.username,
+            }))}
+            styles={styles.select}
+            placeholder="Select Friends"
+            onChange={setSelectedFriends}
+            value={selectedFriends}
+        />
+        <button onClick={handleCreateGroup} style={styles.modalButton}>
+          Create Group
+        </button>
+        <button onClick={() => setIsModalOpen(false)} style={styles.modalButton}>
+          Cancel
+        </button>
+      </Modal>
     </div>
   );
 }
