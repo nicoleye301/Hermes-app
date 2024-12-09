@@ -137,13 +137,16 @@ function Chat({ username }) {
       setFriends(sortedFriends);
 
       // Fetch group list
-      // TODO: sort by date
-      const groupResponse = await axios.get(`${baseURL}/groups/${username}`);
-        setGroups(groupResponse.data);
-    } catch (error) {
-      console.error('Error fetching chats:', error);
-    }
-  };
+    const groupResponse = await axios.get(`${baseURL}/groups/${username}`);
+    const sortedGroups = groupResponse.data.sort(
+      (a, b) => new Date(b.lastMessageTimestamp) - new Date(a.lastMessageTimestamp)
+    );
+    setGroups(sortedGroups);
+  } catch (error) {
+    console.error('Error fetching chats:', error);
+  }
+};
+
   // Fetch friend list on load
   useEffect(() => {
     fetchChats(username);
@@ -676,6 +679,88 @@ const styles = {
     cursor: 'pointer',
     marginTop: '15px',
   },
+
+    createGroupButton: {
+      padding: '10px 20px',
+      backgroundColor: '#7289da',
+      color: '#ffffff',
+      border: 'none',
+      borderRadius: '5px',
+      cursor: 'pointer',
+      fontWeight: 'bold',
+      textAlign: 'center',
+      marginBottom: '20px',
+      transition: 'background-color 0.3s',
+      boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+    },
+    createGroupButtonHover: {
+      backgroundColor: '#5b6dae',
+    },
+    modal: {
+      content: {
+        top: '50%',
+        left: '50%',
+        right: 'auto',
+        bottom: 'auto',
+        marginRight: '-50%',
+        transform: 'translate(-50%, -50%)',
+        backgroundColor: '#2c2f33',
+        color: '#ffffff',
+        borderRadius: '15px',
+        padding: '30px',
+        boxShadow: '0px 0px 25px rgba(0, 0, 0, 0.6)',
+        maxWidth: '600px',
+        width: '90%',
+      },
+      overlay: {
+        backgroundColor: 'rgba(0, 0, 0, 0.7)',
+      },
+    },
+    modalInput: {
+      padding: '10px',
+      marginBottom: '20px',
+      borderRadius: '5px',
+      border: '1px solid #42454a',
+      backgroundColor: '#40444b',
+      color: '#ffffff',
+      width: '100%',
+    },
+    modalButton: {
+      padding: '10px 20px',
+      backgroundColor: '#7289da',
+      color: '#ffffff',
+      border: 'none',
+      borderRadius: '5px',
+      cursor: 'pointer',
+      fontWeight: 'bold',
+      margin: '10px',
+      transition: 'background-color 0.3s',
+    },
+    modalButtonHover: {
+      backgroundColor: '#5b6dae',
+    },
+    select: {
+      control: (base) => ({
+        ...base,
+        backgroundColor: '#40444b',
+        color: '#ffffff',
+        border: '1px solid #42454a',
+        borderRadius: '5px',
+      }),
+      menu: (base) => ({
+        ...base,
+        backgroundColor: '#2c2f33',
+        color: '#ffffff',
+      }),
+      option: (base, state) => ({
+        ...base,
+        backgroundColor: state.isSelected ? '#7289da' : state.isFocused ? '#42454a' : '#2c2f33',
+        color: '#ffffff',
+        cursor: 'pointer',
+      }),
+    },
+  
+  
 };
 
 export default Chat;
