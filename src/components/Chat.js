@@ -243,7 +243,7 @@ function Chat({ username }) {
         }
         else if(chatType === 'group'){
           messageData.groupId = selectedChat;
-          socket.emit('sendGroupMessage', { messageData});
+          socket.emit('sendGroupMessage', messageData);
         }
       }
       setMessage('');
