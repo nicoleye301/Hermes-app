@@ -14,6 +14,7 @@ const User = require('./models/User'); // User model
 const Message = require('./models/Message'); // Message model
 const Post = require('./models/Post'); // Post model
 const GroupMessage = require('./models/GroupMessage');
+const Group = require('./models/Group');
 
 // Initialize App
 const app = express();
