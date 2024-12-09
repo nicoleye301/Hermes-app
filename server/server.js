@@ -12,6 +12,9 @@ const fs = require('fs');
 const User = require('./models/User'); // User model
 const Message = require('./models/Message'); // Message model
 const Post = require('./models/Post'); // Post model
+const Group = require('./models/Group'); // Group model
+const GroupMessage = require('./models/GroupMessage'); // GroupMessage model
+
 
 // Initialize App
 const app = express();
@@ -387,23 +390,109 @@ app.get('/user/:username', async (req, res) => {
   }
 });
 
+// Create a new group
+app.post('/create-group', async (req, res) => {
+  const { groupName, members } = req.body;
+
+  try {
+    // Find the user details for each username in the members array
+    const memberDetails = await User.find({ username: { $in: members } }, 'username profilePicture');
+
+    if (!memberDetails.length) {
+      return res.status(400).json({ message: 'No valid members found' });
+    }
+
+    // Create the new group with member details
+    const newGroup = new Group({
+      groupName,
+      members: memberDetails,
+    });
+
+    await newGroup.save();
+
+    console.log('New group created successfully:', newGroup);
+
+    // Send back the newly created group data
+    res.status(201).json(newGroup);
+  } catch (error) {
+    console.error('Error creating group:', error);
+    res.status(500).json({ message: 'Error creating group', error });
+  }
+});
+
+
+
+
+// Add a member to a group
+app.post('/group/:groupId/add-member', async (req, res) => {
+  const { groupId } = req.params;
+  const { username } = req.body;
+
+  try {
+    const group = await Group.findById(groupId);
+    const user = await User.findOne({ username });
+
+    if (!group || !user) {
+      return res.status(404).json({ message: 'Group or user not found' });
+    }
+
+    if (!group.members.includes(user._id)) {
+      group.members.push(user._id);
+      await group.save();
+      res.status(200).json({ message: 'Member added successfully' });
+    } else {
+      res.status(400).json({ message: 'User is already a member' });
+    }
+  } catch (error) {
+    res.status(500).json({ message: 'Error adding member', error });
+  }
+});
+
+// Get group details
+app.get('/group/:groupId', async (req, res) => {
+  const { groupId } = req.params;
+
+  try {
+    const group = await Group.findById(groupId).populate('members', 'username profilePicture');
+    if (!group) {
+      return res.status(404).json({ message: 'Group not found' });
+    }
+
+    res.status(200).json(group);
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching group', error });
+  }
+});
+
+// Fetch group messages
+app.get('/group-messages/:groupId', async (req, res) => {
+  const { groupId } = req.params;
+
+  try {
+    // Find messages for the group
+    const messages = await GroupMessage.find({ groupId }).sort({ timestamp: 1 });
+
+    res.json(messages);
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching group messages', error });
+  }
+});
+
+
+
+
+
 // Socket.IO for Real-Time Chat
 io.on('connection', (socket) => {
   console.log('New client connected:', socket.id);
 
-  // Listen for typing event
-  socket.on('typing', ({ sender, receiver }) => {
-    // Notify the receiver that the sender is typing
-    socket.broadcast.emit(`typing-${receiver}`, { sender });
+  // Join individual chat rooms for users
+  socket.on('joinChat', ({ username }) => {
+    socket.join(username);
+    console.log(`${username} joined their personal room.`);
   });
 
-  // Listen for stopTyping event
-  socket.on('stopTyping', ({ sender, receiver }) => {
-    // Notify the receiver that the sender has stopped typing
-    socket.broadcast.emit(`stopTyping-${receiver}`, { sender });
-  });
-
-  // Listen for messages
+  // Handle individual messages
   socket.on('sendMessage', async (messageData) => {
     try {
       const { sender, receiver, content } = messageData;
@@ -427,18 +516,62 @@ io.on('connection', (socket) => {
       };
 
       // Emit the message only to the intended receiver and the sender
-      socket.emit('receiveMessage', messageWithProfilePictures); // Emit to sender
-      socket.broadcast.emit('receiveMessage', messageWithProfilePictures); // Emit to receiver
+      io.to(receiver).emit('receiveMessage', messageWithProfilePictures); // Send to receiver
+      socket.emit('receiveMessage', messageWithProfilePictures); // Send to sender
     } catch (error) {
       console.error('Error saving message:', error);
     }
   });
+
+  // Listen for typing event
+  socket.on('typing', ({ sender, receiver }) => {
+    socket.to(receiver).emit(`typing-${receiver}`, { sender });
+  });
+
+  // Listen for stopTyping event
+  socket.on('stopTyping', ({ sender, receiver }) => {
+    socket.to(receiver).emit(`stopTyping-${receiver}`, { sender });
+  });
+
+  // Join a group room
+  socket.on('joinGroup', (groupId) => {
+    socket.join(`group_${groupId}`);
+    console.log(`User joined group: ${groupId}`);
+  });
+
+  /// Handle group messages
+socket.on('sendGroupMessage', async (messageData) => {
+  try {
+    const { groupId, sender, content } = messageData;
+
+    // Save the group message to the database
+    const newGroupMessage = new GroupMessage({
+      groupId,
+      sender,
+      content,
+    });
+    await newGroupMessage.save();
+
+    // Emit the message to everyone in the group
+    const groupMessage = {
+      sender,
+      content,
+      timestamp: new Date(),
+    };
+
+    io.to(`group_${groupId}`).emit('receiveGroupMessage', groupMessage);
+  } catch (error) {
+    console.error('Error sending group message:', error);
+  }
+});
+
 
   // Handle disconnection
   socket.on('disconnect', () => {
     console.log('Client disconnected:', socket.id);
   });
 });
+
 
 // Start Server
 const PORT = process.env.PORT || 5003;

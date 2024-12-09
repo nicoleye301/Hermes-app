@@ -1,14 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
-import io from 'socket.io-client';
 import axios from 'axios';
-import {useNavigate} from "react-router-dom";
+import { useNavigate } from "react-router-dom";
+import socket from '../utils/socket';
 
-const port = 5003;
-const socket = io(`http://localhost:${port}`);
 
 function Chat({ username }) {
   const [friends, setFriends] = useState([]);
-  const [selectedFriend, setSelectedFriend] = useState(null);
+  const [groups, setGroups] = useState([]);
+  const [chatType, setChatType] = useState('individual'); // 'individual' or 'group'
+  const [selectedChat, setSelectedChat] = useState(null); // Friend's username or group ID
   const [messages, setMessages] = useState([]);
   const [message, setMessage] = useState('');
   const [userProfilePicture, setUserProfilePicture] = useState('');
@@ -31,7 +31,7 @@ function Chat({ username }) {
   useEffect(() => {
     const fetchUserProfile = async () => {
       try {
-        const response = await axios.get(`http://localhost:${port}/user/${username}`);
+        const response = await axios.get(`http://localhost:5003/user/${username}`);
         setUserProfilePicture(response.data.profilePicture);
       } catch (error) {
         console.error('Error fetching user profile picture:', error);
@@ -40,42 +40,60 @@ function Chat({ username }) {
     fetchUserProfile();
   }, [username]);
 
-  // Fetch friend list on load
+  // Fetch friend list and group list on load
   useEffect(() => {
-    const fetchFriends = async () => {
+    const fetchFriendsAndGroups = async () => {
       try {
-        const response = await axios.get(`http://localhost:${port}/friends/${username}`);
-        setFriends(response.data);
+        const responseFriends = await axios.get(`http://localhost:5003/friends/${username}`);
+        setFriends(responseFriends.data);
+
+        const responseGroups = await axios.get(`http://localhost:5003/groups/${username}`);
+        setGroups(responseGroups.data);
       } catch (error) {
-        console.error('Error fetching friends:', error);
+        console.error('Error fetching friends or groups:', error);
       }
     };
-    fetchFriends();
+    fetchFriendsAndGroups();
   }, [username]);
 
-  // Fetch chat history when a friend is selected
+  // Fetch chat history when an individual or group chat is selected
   useEffect(() => {
-    if (selectedFriend) {
+    if (chatType === 'individual' && selectedChat) {
+      // Fetch messages for individual chat
       const fetchMessages = async () => {
         try {
-          const response = await axios.get(`http://localhost:${port}/messages/${username}/${selectedFriend}`);
+          const response = await axios.get(`http://localhost:5003/messages/${username}/${selectedChat}`);
           setMessages(response.data);
-          // Reset notifications for the selected friend
-          setNotifications((prev) => ({ ...prev, [selectedFriend]: 0 }));
+          setNotifications((prev) => ({ ...prev, [selectedChat]: 0 })); // Reset notifications
         } catch (error) {
           console.error('Error fetching messages:', error);
         }
       };
       fetchMessages();
-    }
-  }, [selectedFriend, username]);
+    } else if (chatType === 'group' && selectedChat) {
+      // Join the group chat room
+      socket.emit('joinGroup', selectedChat);
 
-  // Handle new messages from Socket.IO
+      // Fetch group messages
+      const fetchGroupMessages = async () => {
+        try {
+          const response = await axios.get(`http://localhost:5003/group-messages/${selectedChat}`);
+          setMessages(response.data);
+        } catch (error) {
+          console.error('Error fetching group messages:', error);
+        }
+      };
+      fetchGroupMessages();
+    }
+  }, [chatType, selectedChat, username]);
+
+  // Handle new individual and group messages from Socket.IO
   useEffect(() => {
-    socket.on('receiveMessage', (newMessage) => {
+    const handleReceiveMessage = (newMessage) => {
       if (
-        (newMessage.sender === username && newMessage.receiver === selectedFriend) ||
-        (newMessage.sender === selectedFriend && newMessage.receiver === username)
+        (newMessage.sender === username && newMessage.receiver === selectedChat) ||
+        (newMessage.sender === selectedChat && newMessage.receiver === username) ||
+        (newMessage.groupId === selectedChat)
       ) {
         setMessages((prevMessages) => [...prevMessages, newMessage]);
       } else if (newMessage.receiver === username) {
@@ -95,24 +113,16 @@ function Chat({ username }) {
           return [friendToAdd, ...updatedFriends].filter(Boolean); // Ensure friendToAdd exists
         });
       }
-    });
+    };
 
-    socket.on(`typing-${username}`, ({ sender }) => {
-      setIsTyping(sender);
-    });
-
-    socket.on(`stopTyping-${username}`, ({ sender }) => {
-      if (isTyping === sender) {
-        setIsTyping(null);
-      }
-    });
+    socket.on('receiveMessage', handleReceiveMessage);
+    socket.on('receiveGroupMessage', handleReceiveMessage);
 
     return () => {
-      socket.off('receiveMessage');
-      socket.off(`typing-${username}`);
-      socket.off(`stopTyping-${username}`);
+      socket.off('receiveMessage', handleReceiveMessage);
+      socket.off('receiveGroupMessage', handleReceiveMessage);
     };
-  }, [selectedFriend, username, isTyping]);
+  }, [selectedChat, username]);
 
   // Scroll to the bottom of the messages container when messages change
   useEffect(() => {
@@ -121,29 +131,26 @@ function Chat({ username }) {
     }
   }, [messages, isTyping]);
 
-  // Send message
+  // Send message to either individual or group
   const sendMessage = () => {
-    if (message && selectedFriend) {
+    if (message && selectedChat) {
       const messageData = {
         sender: username,
-        receiver: selectedFriend,
         content: message,
         senderProfilePicture: userProfilePicture,
       };
 
-      // Emit the message through Socket.IO
-      socket.emit('sendMessage', messageData);
+      if (chatType === 'individual') {
+        messageData.receiver = selectedChat;
+        socket.emit('sendMessage', messageData);
+      } else if (chatType === 'group') {
+        messageData.groupId = selectedChat;
+        socket.emit('sendGroupMessage', messageData);
+      }
       setMessage('');
 
-      // Emit stop typing when sending message
-      socket.emit('stopTyping', { sender: username, receiver: selectedFriend });
-
-      // Move selected friend to the top of the friend list
-      setFriends((prevFriends) => {
-        const updatedFriends = prevFriends.filter((friend) => friend.username !== selectedFriend);
-        const friendToAdd = prevFriends.find((friend) => friend.username === selectedFriend);
-        return [friendToAdd, ...updatedFriends].filter(Boolean); // Ensure friendToAdd exists
-      });
+      // Stop typing indicator after sending message
+      handleStopTyping();
     }
   };
 
@@ -153,14 +160,25 @@ function Chat({ username }) {
 
     if (!typing) {
       setTyping(true);
-      socket.emit('typing', { sender: username, receiver: selectedFriend });
+      if (chatType === 'individual') {
+        socket.emit('typing', { sender: username, receiver: selectedChat });
+      } else if (chatType === 'group') {
+        socket.emit('typing', { sender: username });
+      }
     }
 
     // Stop typing after 1 second
-    setTimeout(() => {
-      setTyping(false);
-      socket.emit('stopTyping', { sender: username, receiver: selectedFriend });
-    }, 1000);
+    setTimeout(handleStopTyping, 1000);
+  };
+
+  // Stop typing handler
+  const handleStopTyping = () => {
+    setTyping(false);
+    if (chatType === 'individual') {
+      socket.emit('stopTyping', { sender: username, receiver: selectedChat });
+    } else if (chatType === 'group') {
+      socket.emit('stopTyping', { sender: username });
+    }
   };
 
   return (
@@ -171,11 +189,14 @@ function Chat({ username }) {
           {friends.map((friend) => (
             <li
               key={friend.username}
-              style={styles.friendItem(selectedFriend === friend.username)}
-              onClick={() => setSelectedFriend(friend.username)}
+              style={styles.friendItem(selectedChat === friend.username)}
+              onClick={() => {
+                setSelectedChat(friend.username);
+                setChatType('individual');
+              }}
             >
               <img
-                src={`http://localhost:${port}${friend.profilePicture}`}
+                src={`http://localhost:5003${friend.profilePicture}`}
                 alt="Profile"
                 style={styles.profilePicture}
               />
@@ -189,25 +210,51 @@ function Chat({ username }) {
               </div>
             </li>
           ))}
+          {groups.map((group) => (
+            <li
+              key={group._id}
+              style={styles.friendItem(selectedChat === group._id)}
+              onClick={() => {
+                setSelectedChat(group._id);
+                setChatType('group');
+              }}
+            >
+              <div style={styles.friendInfo}>
+                <span>{group.groupName}</span>
+              </div>
+            </li>
+          ))}
         </ul>
       </div>
       <div style={styles.chatWindow}>
-        {selectedFriend ? (
+        {selectedChat ? (
           <>
-            <h2>Chat with {selectedFriend}</h2>
+            <h2>
+              Chat with {chatType === 'individual' ? selectedChat : `Group: ${selectedChat}`}
+            </h2>
             <div style={styles.messagesContainer} ref={messagesContainerRef}>
               <div style={styles.messages}>
                 {messages.map((msg, index) => (
                   <div
                     key={index}
-                    style={msg.sender === username ? styles.sentMessageContainer : styles.receivedMessageContainer}
+                    style={
+                      msg.sender === username
+                        ? styles.sentMessageContainer
+                        : styles.receivedMessageContainer
+                    }
                   >
                     <img
-                      src={`http://localhost:${port}${msg.senderProfilePicture}`}
+                      src={`http://localhost:5003${msg.senderProfilePicture}`}
                       alt="Profile"
                       style={styles.messageProfilePicture}
                     />
-                    <p style={msg.sender === username ? styles.sentMessage : styles.receivedMessage}>
+                    <p
+                      style={
+                        msg.sender === username
+                          ? styles.sentMessage
+                          : styles.receivedMessage
+                      }
+                    >
                       {msg.content}
                     </p>
                   </div>
@@ -231,7 +278,7 @@ function Chat({ username }) {
             </button>
           </>
         ) : (
-          <h2>Select a friend to start chatting</h2>
+          <h2>Select a chat to start messaging</h2>
         )}
       </div>
     </div>

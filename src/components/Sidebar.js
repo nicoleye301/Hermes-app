@@ -20,6 +20,9 @@ function Sidebar({setCurrentUser}) {
             <Link to="/chat" className="d-block p-3 link-light text-decoration-none" title="Chat">
               <i className="bi-chat-dots" style={styles.icon}></i>
             </Link>
+            <Link to="/groupchat" className="d-block p-3 link-light text-decoration-none" title="Group Chat">
+              <i className="bi-chat-dots" style={styles.icon}></i>
+            </Link>
             <Link to="/friends" className="d-block p-3 link-light text-decoration-none" title="Friends">
               <i className="bi-people" style={styles.icon}></i>
             </Link>
