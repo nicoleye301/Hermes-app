@@ -49,7 +49,7 @@ function GroupChat({ username }) {
 
       // Listen for new messages for this group
       const handleReceiveGroupMessage = (newMessage) => {
-        setMessages(prevMessages => [...prevMessages, newMessage]);
+        setMessages((prevMessages) => [...prevMessages, newMessage]);
       };
 
       socket.on('receiveGroupMessage', handleReceiveGroupMessage);
@@ -64,7 +64,7 @@ function GroupChat({ username }) {
   // Handle group creation
   const handleCreateGroup = async () => {
     if (newGroupName && selectedFriends.length) {
-      const memberUsernames = selectedFriends.map(friend => friend.value);
+      const memberUsernames = selectedFriends.map((friend) => friend.value);
       try {
         await createGroup(newGroupName, [username, ...memberUsernames]);
         setIsModalOpen(false);
@@ -89,7 +89,6 @@ function GroupChat({ username }) {
         content: message,
       };
       socket.emit('sendGroupMessage', messageData);
-      //setMessages(prevMessages => [...prevMessages, messageData]); // Display the message instantly on the UI
       setMessage('');
     }
   };
@@ -111,24 +110,21 @@ function GroupChat({ username }) {
         {isLoading ? (
           <p>Loading...</p>
         ) : (
-          <ul style={styles.groupList}>
+          <ul style={styles.friendList}>
             {groups.map((group) => (
               <li
                 key={group._id}
-                style={{
-                  ...styles.groupItem,
-                  backgroundColor: selectedGroup === group._id ? '#7289da' : '#2c2f33',
-                  color: selectedGroup === group._id ? '#ffffff' : '#99aab5',
-                }}
+                style={styles.friendItem(selectedGroup === group._id)}
                 onClick={() => setSelectedGroup(group._id)}
               >
-                <span>{group.groupName}</span>
+                <div style={styles.friendInfo}>
+                  <span>{group.groupName}</span>
+                </div>
               </li>
             ))}
           </ul>
         )}
       </div>
-
       <div style={styles.chatWindow}>
         {selectedGroup ? (
           <>
@@ -138,10 +134,21 @@ function GroupChat({ username }) {
                 {messages.map((msg, index) => (
                   <div
                     key={index}
-                    style={msg.sender === username ? styles.sentMessageContainer : styles.receivedMessageContainer}
+                    style={
+                      msg.sender === username
+                        ? styles.sentMessageContainer
+                        : styles.receivedMessageContainer
+                    }
                   >
-                    <p style={msg.sender === username ? styles.sentMessage : styles.receivedMessage}>
-                      <strong>{msg.sender}: </strong>{msg.content}
+                    <p
+                      style={
+                        msg.sender === username
+                          ? styles.sentMessage
+                          : styles.receivedMessage
+                      }
+                    >
+                      <strong>{msg.sender}: </strong>
+                      {msg.content}
                     </p>
                   </div>
                 ))}
@@ -162,8 +169,6 @@ function GroupChat({ username }) {
           <h2>Select a group to start chatting</h2>
         )}
       </div>
-
-      {/* Create Group Modal */}
       <Modal
         isOpen={isModalOpen}
         onRequestClose={() => setIsModalOpen(false)}
@@ -180,7 +185,7 @@ function GroupChat({ username }) {
         />
         <Select
           isMulti
-          options={friends.map(friend => ({
+          options={friends.map((friend) => ({
             value: friend.username,
             label: friend.username,
           }))}
@@ -200,7 +205,6 @@ function GroupChat({ username }) {
   );
 }
 
-
 const styles = {
   container: {
     display: 'flex',
@@ -213,6 +217,32 @@ const styles = {
     color: '#ffffff',
     overflowY: 'auto',
   },
+  chatWindow: {
+    width: '80%',
+    padding: '10px',
+    backgroundColor: '#36393f',
+    color: '#ffffff',
+    display: 'flex',
+    flexDirection: 'column',
+  },
+  friendList: {
+    listStyle: 'none',
+    padding: 0,
+  },
+  friendItem: (isSelected) => ({
+    padding: '10px',
+    backgroundColor: isSelected ? '#7289da' : '#2c2f33',
+    color: isSelected ? '#ffffff' : '#99aab5',
+    cursor: 'pointer',
+    marginBottom: '5px',
+    borderRadius: '4px',
+    display: 'flex',
+    alignItems: 'center',
+  }),
+  friendInfo: {
+    display: 'flex',
+    alignItems: 'center',
+  },
   createGroupButton: {
     padding: '10px',
     backgroundColor: '#7289da',
@@ -222,43 +252,50 @@ const styles = {
     cursor: 'pointer',
     marginBottom: '10px',
   },
-  chatWindow: {
-    flex: 1,
-    display: 'flex',
-    flexDirection: 'column',
-    padding: '20px',
-    backgroundColor: '#36393f',
-  },
   messagesContainer: {
-    flex: 1,
-    overflowY: 'auto',
-    paddingBottom: '20px',
+    flexGrow: 1,
+    overflowY: 'scroll',
+    border: '1px solid #42454a',
+    padding: '10px',
+    backgroundColor: '#2c2f33',
+    borderRadius: '8px',
+  },
+  sentMessageContainer: {
+    display: 'flex',
+    justifyContent: 'flex-end',
+    marginBottom: '10px',
+  },
+  receivedMessageContainer: {
+    display: 'flex',
+    justifyContent: 'flex-start',
+    marginBottom: '10px',
+  },
+  sentMessage: {
+    color: '#7289da',
+  },
+  receivedMessage: {
+    color: '#ffffff',
   },
   input: {
     padding: '10px',
-    marginTop: '10px',
     borderRadius: '5px',
-    border: 'none',
     backgroundColor: '#40444b',
-    color: 'white',
-    flex: 1,
+    color: '#ffffff',
+    border: '1px solid #42454a',
   },
   button: {
-    marginTop: '10px',
     padding: '10px',
     backgroundColor: '#7289da',
     color: 'white',
     border: 'none',
     borderRadius: '5px',
     cursor: 'pointer',
+    marginTop: '10px',
   },
   modal: {
     content: {
       top: '50%',
       left: '50%',
-      right: 'auto',
-      bottom: 'auto',
-      marginRight: '-50%',
       transform: 'translate(-50%, -50%)',
       backgroundColor: '#2c2f33',
       color: '#ffffff',
