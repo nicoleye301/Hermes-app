@@ -38,6 +38,47 @@ function Chat({ username }) {
     }
   }, [navigate, username]);
 
+  const handleReceiveMessage = (newMessage)=> {
+    // Filter messages based on the selected friend
+    if (
+        (newMessage.sender === selectedChat && newMessage.receiver === username) ||
+        (newMessage.sender === username && newMessage.receiver === selectedChat) ||
+        (newMessage.groupId === selectedChat)
+    ) {
+      setMessages((prevMessages) => {
+        if (!prevMessages.find((msg) => msg._id === newMessage._id)) {
+          return [...prevMessages, newMessage];
+        }
+        return prevMessages;
+      });
+    }
+
+    //TODO: update notifications for group messages
+
+    // Update notifications if the message is for the current user but not in the current chat
+    if (!(newMessage.groupId === selectedChat)&&(newMessage.receiver === username && newMessage.sender !== selectedChat)) {
+      setNotifications((prev) => ({
+        ...prev,
+        [newMessage.sender]: (prev[newMessage.sender] || 0) + 1,
+      }));
+    }
+
+    //TODO: re-sort chat list for Group
+    if (!(newMessage.groupId === selectedChat)&&(newMessage.receiver === username || newMessage.sender === username)) {
+      const friendToMove = newMessage.sender === username ? newMessage.receiver : newMessage.sender;
+      setFriends((prevFriends) => {
+        const updatedFriends = prevFriends.map((friend) =>
+            friend.username === friendToMove
+                ? { ...friend, lastMessageTimestamp: new Date().toISOString() }
+                : friend
+        );
+        return updatedFriends
+            .filter(Boolean)
+            .sort((a, b) => new Date(b.lastMessageTimestamp) - new Date(a.lastMessageTimestamp));
+      });
+    }
+  };
+
   // Initialize socket connection and handle listeners
   useEffect(() => {
     if (!socket) {
@@ -48,42 +89,10 @@ function Chat({ username }) {
       socket.emit('joinRoom', username);
 
       // Listen for incoming messages
-      socket.on('receiveMessage', (newMessage) => {
-        // Filter messages based on the selected friend
-        if (
-          (newMessage.sender === selectedChat && newMessage.receiver === username) ||
-          (newMessage.sender === username && newMessage.receiver === selectedChat)
-        ) {
-          setMessages((prevMessages) => {
-            if (!prevMessages.find((msg) => msg._id === newMessage._id)) {
-              return [...prevMessages, newMessage];
-            }
-            return prevMessages;
-          });
-        }
+      socket.on('receiveMessage', handleReceiveMessage);
+      socket.on('receiveGroupMessage', handleReceiveMessage);
 
-        // Update notifications if the message is for the current user but not in the current chat
-        if (newMessage.receiver === username && newMessage.sender !== selectedChat) {
-          setNotifications((prev) => ({
-            ...prev,
-            [newMessage.sender]: (prev[newMessage.sender] || 0) + 1,
-          }));
-        }
 
-        if (newMessage.receiver === username || newMessage.sender === username) {
-          const friendToMove = newMessage.sender === username ? newMessage.receiver : newMessage.sender;
-          setFriends((prevFriends) => {
-            const updatedFriends = prevFriends.map((friend) =>
-              friend.username === friendToMove
-                ? { ...friend, lastMessageTimestamp: new Date().toISOString() }
-                : friend
-            );
-            return updatedFriends
-              .filter(Boolean)
-              .sort((a, b) => new Date(b.lastMessageTimestamp) - new Date(a.lastMessageTimestamp));
-          });
-        }
-      });
 
       // Handle typing indicators
       socket.on(`typing-${username}`, ({ sender }) => {
@@ -101,6 +110,7 @@ function Chat({ username }) {
       return () => {
         // Cleanup socket listeners on component unmount
         socket.off('receiveMessage');
+        socket.off('receiveGroupMessage');
         socket.off(`typing-${username}`);
         socket.off(`stopTyping-${username}`);
       };
