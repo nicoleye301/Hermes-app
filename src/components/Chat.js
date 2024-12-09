@@ -40,6 +40,7 @@ function Chat({ username }) {
 
   const handleReceiveMessage = (newMessage)=> {
     // Filter messages based on the selected friend
+    alert('new message received');
     if (
         (newMessage.sender === selectedChat && newMessage.receiver === username) ||
         (newMessage.sender === username && newMessage.receiver === selectedChat) ||
@@ -178,6 +179,7 @@ function Chat({ username }) {
         fetchMessages();
       }
       else if(chatType === 'group') {
+        socket.emit('joinGroup', selectedChat);
         // Fetch group messages
         const fetchGroupMessages = async () => {
           try {
@@ -376,7 +378,9 @@ function Chat({ username }) {
         {selectedChat ? (
             <>
               <div style={styles.chatHeader}>
-              <h2 style={styles.chatHeaderText}>{selectedChat}</h2>
+              <h2 style={styles.chatHeaderText}>{chatType === 'individual' ? 'Chat with ' : 'Group: '}{
+
+                selectedChat}</h2>
               <button onClick={openFriendProfile} style={styles.viewProfileButton}>
                 View Profile
               </button>
