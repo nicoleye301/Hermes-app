@@ -614,7 +614,6 @@ app.delete('/message/:messageId', async (req, res) => {
 
 app.delete('/kick/:groupId/:userId', async (req, res) => {
     const { groupId, userId } = req.params;
-
     try {
         const group = await Group.findById(groupId);
         const user = await User.findById(userId);
@@ -631,6 +630,7 @@ app.delete('/kick/:groupId/:userId', async (req, res) => {
             res.status(400).json({ message: 'User is not a member' });
         }
     } catch (error) {
+      console.error('Error kicking user:', error);
         res.status(500).json({ message: 'Error kicking user', error });
     }
 });

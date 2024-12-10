@@ -563,16 +563,15 @@ function Chat({ username }) {
           contentLabel="Remove User"
       >
         <h2>Remove User</h2>
-        <Select
-            options={groupMembers.map(member => ({
-              value: member._id,
-              label: member.username,
-            }))}
-            styles={styles.select}
-            placeholder="Select Friends"
-            onChange={setKickUser}
-            value={kickUser}
-        />
+        <select onChange={(e) => setKickUser(e.target.value)} value={kickUser}>
+          <option value="">Select Member</option>
+          {groupMembers.map((member, index) => {
+            return <option key={index} value={member._id}>
+              {member.username}
+            </option>
+          })
+          }
+        </select>
         <button onClick={kickUserFromGroup} style={styles.modalButton}>
           Remove User
         </button>
