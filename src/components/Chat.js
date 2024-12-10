@@ -26,6 +26,8 @@ function Chat({ username }) {
   const [newGroupName, setNewGroupName] = useState('');
   const [selectedFriends, setSelectedFriends] = useState([]);
   const [chatType, setChatType] = useState('individual'); // 'individual' or 'group'
+  const [activeTab, setActiveTab] = useState('individual'); // tab status 
+  
 
   // Reference to the messages container
   const messagesContainerRef = useRef(null);
@@ -318,68 +320,87 @@ function Chat({ username }) {
     });
   };
 
+  
+
   return (
     <div style={styles.container}>
       <div style={styles.sidebar}>
+        {/* Add Tab Switch on Top */}
+        <div style={styles.tabBar}>
+          <button
+            style={activeTab === 'individual' ? styles.activeTab : styles.tab}
+            onClick={() => setActiveTab('individual')}
+          >
+            Individual Chats
+          </button>
+          <button
+            style={activeTab === 'group' ? styles.activeTab : styles.tab}
+            onClick={() => setActiveTab('group')}
+          >
+            Group Chats
+          </button>
+        </div>
         <h2 style={styles.chatHeader}>Messages</h2>
-        {/*create group button*/}
+        {/* Create Group Button */}
         <button onClick={() => setIsModalOpen(true)} style={styles.createGroupButton}>
           Create Group
         </button>
         <ul style={styles.friendList}>
-          {friends.map((friend) => (
-              <li
+          {activeTab === 'individual'
+            ? friends.map((friend) => (
+                <li
                   key={friend.username}
                   style={styles.friendItem(selectedChat === friend.username)}
                   onClick={() => {
                     setSelectedChat(friend.username);
                     setChatType('individual');
                   }}
-              >
-                <img
+                >
+                  <img
                     src={`${baseURL}${friend.profilePicture}`}
                     alt="Profile"
                     style={styles.profilePicture}
-                />
-                <div style={styles.friendInfo}>
-                  <span>{friend.username}</span>
-                  {notifications[friend.username] > 0 && (
+                  />
+                  <div style={styles.friendInfo}>
+                    <span>{friend.username}</span>
+                    {notifications[friend.username] > 0 && (
                       <div style={styles.notificationBubble}>
                         {notifications[friend.username]}
                       </div>
-                  )}
-                  <br/>
-                  <span style={styles.timestamp}>
-                  {friend.lastMessageTimestamp
-                      ? new Date(friend.lastMessageTimestamp).toLocaleString()
-                      : 'No messages yet'}
-                </span>
-                </div>
-              </li>
-          ))}
-          {groups.map((group) => (
-              <li
+                    )}
+                    <br />
+                    <span style={styles.timestamp}>
+                      {friend.lastMessageTimestamp
+                        ? new Date(friend.lastMessageTimestamp).toLocaleString()
+                        : 'No messages yet'}
+                    </span>
+                  </div>
+                </li>
+              ))
+            : groups.map((group) => (
+                <li
                   key={group._id}
                   style={styles.friendItem(selectedChat === group._id)}
                   onClick={() => {
                     setSelectedChat(group._id);
                     setChatType('group');
                   }}
-              >
-                <div style={styles.friendInfo}>
-                  <span>{group.groupName}</span>
-                </div>
-              </li>
-          ))}
+                >
+                  <div style={styles.friendInfo}>
+                    <span>{group.groupName}</span>
+                  </div>
+                </li>
+              ))}
         </ul>
       </div>
       <div style={styles.chatWindow}>
         {selectedChat ? (
-            <>
-              <div style={styles.chatHeader}>
-              <h2 style={styles.chatHeaderText}>{chatType === 'individual' ? 'Chat with ' : 'Group: '}{
-
-                selectedChat}</h2>
+          <>
+            <div style={styles.chatHeader}>
+              <h2 style={styles.chatHeaderText}>
+                {chatType === 'individual' ? 'Chat with ' : 'Group: '}
+                {selectedChat}
+              </h2>
               <button onClick={openFriendProfile} style={styles.viewProfileButton}>
                 View Profile
               </button>
@@ -390,7 +411,9 @@ function Chat({ username }) {
                   <div
                     key={`${msg._id}-${index}`}
                     style={
-                      msg.sender === username ? styles.sentMessageContainer : styles.receivedMessageContainer
+                      msg.sender === username
+                        ? styles.sentMessageContainer
+                        : styles.receivedMessageContainer
                     }
                     onMouseEnter={() => setHoveredMessageId(msg._id)}
                     onMouseLeave={() => setHoveredMessageId(null)}
@@ -415,7 +438,9 @@ function Chat({ username }) {
                           <i className="bi bi-trash"></i>
                         </button>
                       )}
-                      <span style={styles.timestampOutside}>{formatTime(msg.timestamp)}</span>
+                      <span style={styles.timestampOutside}>
+                        {formatTime(msg.timestamp)}
+                      </span>
                     </div>
                   </div>
                 ))}
@@ -767,6 +792,198 @@ const styles = {
     modalButtonHover: {
       backgroundColor: '#5b6dae',
     },
+      container: {
+        display: 'flex',
+        height: '100vh',
+      },
+      sidebar: {
+        width: '25%',
+        backgroundColor: '#2c2f33',
+        padding: '20px',
+        color: '#ffffff',
+        overflowY: 'auto',
+      },
+      tabBar: {
+        display: 'flex',
+        justifyContent: 'space-between',
+        marginBottom: '20px',
+        borderBottom: '1px solid #42454a',
+        paddingBottom: '10px',
+      },
+      tab: {
+        flex: 1,
+        padding: '10px',
+        textAlign: 'center',
+        cursor: 'pointer',
+        color: '#99aab5',
+        backgroundColor: '#2c2f33',
+        border: 'none',
+        borderRadius: '4px',
+        margin: '0 5px',
+        transition: 'all 0.3s',
+        fontWeight: 'bold',
+      },
+      activeTab: {
+        flex: 1,
+        padding: '10px',
+        textAlign: 'center',
+        cursor: 'pointer',
+        color: '#ffffff',
+        backgroundColor: '#7289da',
+        border: 'none',
+        borderRadius: '4px',
+        margin: '0 5px',
+        fontWeight: 'bold',
+        boxShadow: '0px 0px 8px rgba(114, 137, 218, 0.6)',
+      },
+      chatHeader: {
+        position: 'relative',
+        display: 'flex',
+        justifyContent: 'center',
+        marginBottom: '20px',
+      },
+      chatHeaderText: {
+        margin: 0,
+      },
+      viewProfileButton: {
+        position: 'absolute',
+        right: 0,
+        padding: '8px 12px',
+        backgroundColor: '#4e5d94',
+        color: '#ffffff',
+        border: 'none',
+        borderRadius: '15px',
+        cursor: 'pointer',
+        transition: 'background-color 0.3s',
+      },
+      friendList: {
+        listStyle: 'none',
+        padding: 0,
+        color: '#ffffff',
+      },
+      friendItem: (isSelected) => ({
+        padding: '10px',
+        backgroundColor: isSelected ? '#7289da' : '#2c2f33',
+        color: isSelected ? '#ffffff' : '#99aab5',
+        cursor: 'pointer',
+        marginBottom: '5px',
+        borderRadius: '4px',
+        transition: 'all 0.2s ease-in-out',
+        display: 'flex',
+        alignItems: 'center',
+        position: 'relative',
+      }),
+      profilePicture: {
+        width: '30px',
+        height: '30px',
+        borderRadius: '50%',
+        marginRight: '10px',
+      },
+      notificationBubble: {
+        backgroundColor: '#ff5555',
+        color: '#ffffff',
+        borderRadius: '50%',
+        padding: '5px 10px',
+        fontSize: '0.8em',
+        position: 'absolute',
+        top: '-5px',
+        right: '-10px',
+        zIndex: 1,
+      },
+      chatWindow: {
+        width: '75%',
+        padding: '20px',
+        backgroundColor: '#36393f',
+        color: '#ffffff',
+        display: 'flex',
+        flexDirection: 'column',
+        position: 'relative',
+      },
+      messagesContainer: {
+        flexGrow: 1,
+        overflowY: 'scroll',
+        marginBottom: '10px',
+        padding: '10px',
+        backgroundColor: '#40444b',
+        borderRadius: '5px',
+      },
+      sentMessageContainer: {
+        display: 'flex',
+        justifyContent: 'flex-end',
+        alignItems: 'center',
+        marginBottom: '5px',
+      },
+      receivedMessageContainer: {
+        display: 'flex',
+        justifyContent: 'flex-start',
+        alignItems: 'center',
+        marginBottom: '5px',
+      },
+      sentMessageBubble: {
+        backgroundColor: '#7289da',
+        color: '#ffffff',
+        padding: '10px',
+        borderRadius: '15px',
+        maxWidth: '60%',
+        position: 'relative',
+      },
+      receivedMessageBubble: {
+        backgroundColor: '#40444b',
+        color: '#ffffff',
+        padding: '10px',
+        borderRadius: '15px',
+        maxWidth: '60%',
+        position: 'relative',
+      },
+      input: {
+        padding: '10px',
+        border: '1px solid #42454a',
+        borderRadius: '5px',
+        backgroundColor: '#40444b',
+        color: '#ffffff',
+      },
+      button: {
+        padding: '10px',
+        backgroundColor: '#7289da',
+        color: 'white',
+        border: 'none',
+        borderRadius: '5px',
+        cursor: 'pointer',
+        marginTop: '10px',
+      },
+      createGroupButton: {
+        padding: '10px 20px',
+        backgroundColor: '#7289da',
+        color: '#ffffff',
+        border: 'none',
+        borderRadius: '5px',
+        cursor: 'pointer',
+        fontWeight: 'bold',
+        textAlign: 'center',
+        marginBottom: '20px',
+        transition: 'background-color 0.3s',
+        boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+      },
+      modal: {
+        content: {
+          top: '50%',
+          left: '50%',
+          right: 'auto',
+          bottom: 'auto',
+          marginRight: '-50%',
+          transform: 'translate(-50%, -50%)',
+          backgroundColor: '#2c2f33',
+          color: '#ffffff',
+          borderRadius: '15px',
+          padding: '30px',
+          boxShadow: '0px 0px 25px rgba(0, 0, 0, 0.6)',
+          maxWidth: '600px',
+          width: '90%',
+        },
+        overlay: {
+          backgroundColor: 'rgba(0, 0, 0, 0.7)',
+        },
+      },   
     select: {
       control: (base) => ({
         ...base,
@@ -787,8 +1004,6 @@ const styles = {
         cursor: 'pointer',
       }),
     },
-  
-  
 };
 
 export default Chat;
