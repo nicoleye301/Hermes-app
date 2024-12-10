@@ -246,6 +246,24 @@ function Chat({ username }) {
     }
   };
 
+  const kickUserFromGroup = async () => {
+    await axios.get(`${baseURL}/group/${selectedChat}`).then(async (response) => {
+      if (response.data.owner !== username) {
+        alert('You are not the owner of this group');
+        return;
+      }
+      try {
+        //userId is whom to be removed
+        await axios.delete(`${baseURL}/kick/${selectedChat}/${kickUser}`).then((res) => {
+          setIsKickUserOpen(false);
+        });
+      } catch (error) {
+        alert('Error kicking user from group:');
+        throw error;
+      }
+    });
+  };
+
   // Send message
   const sendMessage = () => {
     if (message && selectedChat) {
@@ -764,8 +782,8 @@ const styles = {
   },
   tabBar: {
     display: 'flex',
-    alignItems: 'center', 
-    justifyContent: 'space-between', 
+    alignItems: 'center',
+    justifyContent: 'space-between',
     marginBottom: '5px',
     borderBottom: '1px solid #42454a',
     paddingBottom: '5px',
@@ -776,17 +794,17 @@ const styles = {
   },      
   tab: {
     flex: 1,
-    padding: '3px 5px', 
+    padding: '3px 5px',
     textAlign: 'center',
     cursor: 'pointer',
     color: '#99aab5',
     backgroundColor: '#2c2f33',
     border: 'none',
-    borderRadius: '2px', 
-    margin: '0 2px', 
-    fontSize: '0.8rem', 
+    borderRadius: '2px',
+    margin: '0 2px',
+    fontSize: '0.8rem',
     transition: 'all 0.2s',
-    fontWeight: 'normal', 
+    fontWeight: 'normal',
   },
   activeTab: {
     flex: 1,
@@ -799,9 +817,10 @@ const styles = {
     borderRadius: '2px',
     margin: '0 2px',
     fontSize: '0.8rem',
-    fontWeight: 'bold', 
-    boxShadow: '0px 0px 2px rgba(114, 137, 218, 0.7)', 
-  }, 
+    fontWeight: 'bold',
+    boxShadow: '0px 0px 2px rgba(114, 137, 218, 0.7)',
+  },
+
   modal: {
     content: {
       top: '50%',
