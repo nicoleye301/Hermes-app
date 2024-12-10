@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, {useEffect, useRef, useState} from 'react';
 import io from 'socket.io-client';
 import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
+import {useNavigate} from 'react-router-dom';
 import 'bootstrap-icons/font/bootstrap-icons.css';
 import Modal from "react-modal";
 import Select from "react-select";
@@ -27,7 +27,9 @@ function Chat({ username }) {
   const [selectedFriends, setSelectedFriends] = useState([]);
   const [chatType, setChatType] = useState('individual'); // 'individual' or 'group'
   const [activeTab, setActiveTab] = useState('individual'); // tab status 
-  
+  const [isKickUserOpen, setIsKickUserOpen] = useState(false);
+  const [kickUser, setKickUser] = useState(null);
+  const [groupMembers, setGroupMembers] = useState([]);
 
   // Reference to the messages container
   const messagesContainerRef = useRef(null);
@@ -40,59 +42,59 @@ function Chat({ username }) {
     }
   }, [navigate, username]);
 
-  const handleReceiveMessage = (newMessage) => {
-    // Filter messages based on the selected friend or group
-    if (
-      (newMessage.sender === selectedChat && newMessage.receiver === username) ||
-      (newMessage.sender === username && newMessage.receiver === selectedChat) ||
-      (newMessage.groupId === selectedChat)
-    ) {
-      setMessages((prevMessages) => {
-        if (prevMessages.find((msg) => msg._id === newMessage.id)) {
-          return prevMessages;
-        }
-        return [...prevMessages, newMessage];
-      });
-    }
-  
-    // Update notifications for group messages
-    if (newMessage.groupId && newMessage.groupId !== selectedChat) {
-      setNotifications((prev) => ({
-        ...prev,
-        [newMessage.groupId]: (prev[newMessage.groupId] || 0) + 1,
-      }));
-    }
-  
-    // Re-sort chat list for group messages
-    if (newMessage.groupId) {
-      setGroups((prevGroups) =>
-        prevGroups
-          .map((group) =>
-            group._id === newMessage.groupId
-              ? { ...group, lastMessageTimestamp: newMessage.timestamp }
-              : group
-          )
-          .sort((a, b) => new Date(b.lastMessageTimestamp) - new Date(a.lastMessageTimestamp))
-      );
-    }
-  
-    // Re-sort chat list for individual messages
-    if (!(newMessage.groupId === selectedChat) && (newMessage.receiver === username || newMessage.sender === username)) {
-      const friendToMove = newMessage.sender === username ? newMessage.receiver : newMessage.sender;
-      setFriends((prevFriends) =>
-        prevFriends
-          .map((friend) =>
-            friend.username === friendToMove
-              ? { ...friend, lastMessageTimestamp: new Date().toISOString() }
-              : friend
-          )
-          .sort((a, b) => new Date(b.lastMessageTimestamp) - new Date(a.lastMessageTimestamp))
-      );
-    }
-  };
-
   // Initialize socket connection and handle listeners
   useEffect(() => {
+    const handleReceiveMessage = (newMessage) => {
+      // Filter messages based on the selected friend or group
+      if (
+          (newMessage.sender === selectedChat && newMessage.receiver === username) ||
+          (newMessage.sender === username && newMessage.receiver === selectedChat) ||
+          (newMessage.groupId === selectedChat)
+      ) {
+        setMessages((prevMessages) => {
+          if (prevMessages.find((msg) => msg._id === newMessage.id)) {
+            return prevMessages;
+          }
+          return [...prevMessages, newMessage];
+        });
+      }
+
+      // Update notifications for group messages
+      if (newMessage.groupId && newMessage.groupId !== selectedChat) {
+        setNotifications((prev) => ({
+          ...prev,
+          [newMessage.groupId]: (prev[newMessage.groupId] || 0) + 1,
+        }));
+      }
+
+      // Re-sort chat list for group messages
+      if (newMessage.groupId) {
+        setGroups((prevGroups) =>
+            prevGroups
+                .map((group) =>
+                    group._id === newMessage.groupId
+                        ? { ...group, lastMessageTimestamp: newMessage.timestamp }
+                        : group
+                )
+                .sort((a, b) => new Date(b.lastMessageTimestamp) - new Date(a.lastMessageTimestamp))
+        );
+      }
+
+      // Re-sort chat list for individual messages
+      if (!(newMessage.groupId === selectedChat) && (newMessage.receiver === username || newMessage.sender === username)) {
+        const friendToMove = newMessage.sender === username ? newMessage.receiver : newMessage.sender;
+        setFriends((prevFriends) =>
+            prevFriends
+                .map((friend) =>
+                    friend.username === friendToMove
+                        ? { ...friend, lastMessageTimestamp: new Date().toISOString() }
+                        : friend
+                )
+                .sort((a, b) => new Date(b.lastMessageTimestamp) - new Date(a.lastMessageTimestamp))
+        );
+      }
+    };
+
     if (!socket) {
       socket = io(baseURL);
     }
@@ -209,6 +211,7 @@ function Chat({ username }) {
       const response = await axios.post(`${baseURL}/create-group`, {
         groupName,
         members,
+        owner: username
       });
       setGroups(prevGroups => [...prevGroups, response.data]);
     } catch (error) {
@@ -330,18 +333,15 @@ function Chat({ username }) {
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
   };
 
-  const formatFullDateTime = (timestamp) => {
-    const date = new Date(timestamp);
-    return date.toLocaleString([], {
-      weekday: 'short',
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: true,
-    });
-  };
+  function getGroupMembers() {
+    axios.get(`${baseURL}/group/${selectedChat}`)
+      .then((response) => {
+        setGroupMembers(response.data.members);
+      })
+      .catch((error) => {
+        console.error('Error fetching group members:', error);
+      });
+  }
 
   return (
     <div style={styles.container}>
@@ -436,63 +436,76 @@ function Chat({ username }) {
                 ? `Chat with ${selectedChat}`
                 : `${groups.find(group => group._id === selectedChat)?.groupName || 'Unknown Group'}`}
             </h2>
-              <button onClick={openFriendProfile} style={styles.viewProfileButton}>
-                View Profile
-              </button>
+              {chatType === 'individual' ?
+                <>
+                  <button onClick={openFriendProfile} style={styles.viewProfileButton}>
+                    View Profile
+                  </button>
+                </> :
+                <>
+                  <button onClick={() => {
+                    setIsKickUserOpen(true);
+                    getGroupMembers();
+                  }} style={styles.viewProfileButton}>
+                    Remove User
+                  </button>
+                </>
+              }
             </div>
             <div style={styles.messagesContainer} ref={messagesContainerRef}>
               <div style={styles.messages}>
               {messages.map((msg, index) => (
+              <div
+                key={`${msg._id}-${index}`}
+                style={
+                  msg.sender === username
+                    ? styles.sentMessageContainer
+                    : styles.receivedMessageContainer
+                }
+                onMouseEnter={() => setHoveredMessageId(msg._id)}
+                onMouseLeave={() => setHoveredMessageId(null)}
+              >
+                {msg.sender !== username && (
+                  <img
+                    src={`${baseURL}${msg.senderProfilePicture || '/default-avatar.png'}`}
+                    alt="Sender Profile"
+                    style={styles.messageProfilePicture}
+                  />
+                )}
+                {msg.sender === username && (
+                  <img
+                    src={`${baseURL}${userProfilePicture || '/default-avatar.png'}`}
+                    alt="Your Profile"
+                    style={styles.messageProfilePicture}
+                  />
+                )}
                 <div
-                  key={`${msg._id}-${index}`}
                   style={
                     msg.sender === username
-                      ? styles.sentMessageContainer
-                      : styles.receivedMessageContainer
+                      ? styles.sentMessageBubble
+                      : styles.receivedMessageBubble
                   }
-                  onMouseEnter={() => setHoveredMessageId(msg._id)}
-                  onMouseLeave={() => setHoveredMessageId(null)}
                 >
-                  {msg.sender !== username && (
-                    <img
-                      src={`${baseURL}${msg.senderProfilePicture || '/default-avatar.png'}`}
-                      alt="Sender Profile"
-                      style={styles.messageProfilePicture}
-                    />
-                  )}
-                  {msg.sender === username && (
-                    <img
-                      src={`${baseURL}${userProfilePicture || '/default-avatar.png'}`}
-                      alt="Your Profile"
-                      style={styles.messageProfilePicture}
-                    />
-                  )}
-                  <div
-                    style={
-                      msg.sender === username
-                        ? styles.sentMessageBubble
-                        : styles.receivedMessageBubble
-                    }
-                  >
-                    <div style={styles.message}>
-                      <p style={styles.messageText}>{msg.content}</p>
-                    </div>
-                  </div>
-                  <div style={styles.messageInfo}>
-                    {msg.sender === username && hoveredMessageId === msg._id && (
-                      <button
-                        onClick={() => deleteMessage(msg._id)}
-                        style={styles.deleteButton}
-                      >
-                        <i className="bi bi-trash"></i>
-                      </button>
-                    )}
-                    <span style={styles.timestampOutside}>
-                      {formatTime(msg.timestamp)}
-                    </span>
+                  <div style={styles.message}>
+                    <p style={styles.messageText}>{msg.content}</p>
                   </div>
                 </div>
-              ))}
+                <div style={styles.messageInfo}>
+                  {msg.sender === username && hoveredMessageId === msg._id && (
+                    <button
+                      onClick={() => deleteMessage(msg._id)}
+                      style={styles.deleteButton}
+                    >
+                      <i className="bi bi-trash"></i>
+                    </button>
+                  )}
+                  <span style={styles.timestampOutside}>
+                    {formatTime(msg.timestamp)}
+                  </span>
+                </div>
+              </div>
+            ))}
+
                 {isTyping && (
                   <div style={styles.typingIndicator}>
                     {isTyping} is typing...
@@ -562,6 +575,30 @@ function Chat({ username }) {
           Create Group
         </button>
         <button onClick={() => setIsModalOpen(false)} style={styles.modalButton}>
+          Cancel
+        </button>
+      </Modal>
+
+      <Modal
+          isOpen={isKickUserOpen}
+          onRequestClose={() => setIsKickUserOpen(false)}
+          style={styles.modal}
+          contentLabel="Remove User"
+      >
+        <h2>Remove User</h2>
+        <select onChange={(e) => setKickUser(e.target.value)} value={kickUser}>
+          <option value="">Select Member</option>
+          {groupMembers.map((member, index) => {
+            return <option key={index} value={member._id}>
+              {member.username}
+            </option>
+          })
+          }
+        </select>
+        <button onClick={kickUserFromGroup} style={styles.modalButton}>
+          Remove User
+        </button>
+        <button onClick={() => setIsKickUserOpen(false)} style={styles.modalButton}>
           Cancel
         </button>
       </Modal>
@@ -780,6 +817,19 @@ const styles = {
     cursor: 'pointer',
     marginTop: '15px',
   },
+  createGroupButton: {
+    padding: '10px 20px',
+    backgroundColor: '#7289da',
+    color: '#ffffff',
+    border: 'none',
+    borderRadius: '5px',
+    cursor: 'pointer',
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: '20px',
+    transition: 'background-color 0.3s',
+    boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+  },
   tabBar: {
     display: 'flex',
     alignItems: 'center',
@@ -788,10 +838,8 @@ const styles = {
     borderBottom: '1px solid #42454a',
     paddingBottom: '5px',
     position: 'relative',
-    paddingRight: '30px', 
-    padding: '10px', 
-    overflow: 'visible', 
-  },      
+    paddingRight: '40px',
+  },
   tab: {
     flex: 1,
     padding: '3px 5px',
@@ -820,7 +868,13 @@ const styles = {
     fontWeight: 'bold',
     boxShadow: '0px 0px 2px rgba(114, 137, 218, 0.7)',
   },
-
+  messageProfilePicture: {
+    width: '30px',
+    height: '30px',
+    borderRadius: '50%',
+    marginRight: '10px',
+    objectFit: 'cover',
+  },
   modal: {
     content: {
       top: '50%',
@@ -840,49 +894,27 @@ const styles = {
     overlay: {
       backgroundColor: 'rgba(0, 0, 0, 0.7)',
     },
-  }, 
-  createGroupIcon: {
-    position: 'absolute',
-    top: '50%', 
-    right: '5px', 
-    transform: 'translateY(-50%)', 
-    fontSize: '1rem', 
-    color: '#7289da',
-    backgroundColor: 'transparent',
-    border: 'none',
-    cursor: 'pointer',
-    transition: 'color 0.2s ease',
   },
-  createGroupIconHover: {
-    color: '#5b6dae', 
+  select: {
+    control: (base) => ({
+      ...base,
+      backgroundColor: '#40444b',
+      color: '#ffffff',
+      border: '1px solid #42454a',
+      borderRadius: '5px',
+    }),
+    menu: (base) => ({
+      ...base,
+      backgroundColor: '#2c2f33',
+      color: '#ffffff',
+    }),
+    option: (base, state) => ({
+      ...base,
+      backgroundColor: state.isSelected ? '#7289da' : state.isFocused ? '#42454a' : '#2c2f33',
+      color: '#ffffff',
+      cursor: 'pointer',
+    }),
   },
-  messageProfilePicture: {
-    width: '30px',
-    height: '30px',
-    borderRadius: '50%',
-    marginRight: '10px',
-    objectFit: 'cover',
-  },                 
-select: {
-  control: (base) => ({
-    ...base,
-    backgroundColor: '#40444b',
-    color: '#ffffff',
-    border: '1px solid #42454a',
-    borderRadius: '5px',
-  }),
-  menu: (base) => ({
-    ...base,
-    backgroundColor: '#2c2f33',
-    color: '#ffffff',
-  }),
-  option: (base, state) => ({
-    ...base,
-    backgroundColor: state.isSelected ? '#7289da' : state.isFocused ? '#42454a' : '#2c2f33',
-    color: '#ffffff',
-    cursor: 'pointer',
-  }),
-},
 };
 
 export default Chat;
