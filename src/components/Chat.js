@@ -748,19 +748,21 @@ const styles = {
     cursor: 'pointer',
     marginTop: '15px',
   },
-  createGroupButton: {
-    padding: '10px 20px',
-    backgroundColor: '#7289da',
-    color: '#ffffff',
+  createGroupIcon: {
+    position: 'absolute',
+    top: '50%', 
+    right: '5px', 
+    transform: 'translateY(-50%)', 
+    fontSize: '1rem', 
+    color: '#7289da',
+    backgroundColor: 'transparent',
     border: 'none',
-    borderRadius: '5px',
     cursor: 'pointer',
-    fontWeight: 'bold',
-    textAlign: 'center',
-    marginBottom: '20px',
-    transition: 'background-color 0.3s',
-    boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+    transition: 'color 0.2s ease',
   },
+  createGroupIconHover: {
+    color: '#5b6dae', 
+  },  
   tabBar: {
     display: 'flex',
     alignItems: 'center', 
@@ -769,7 +771,7 @@ const styles = {
     borderBottom: '1px solid #42454a',
     paddingBottom: '5px',
     position: 'relative',
-    paddingRight: '40px', 
+    paddingRight: '0px', 
   },      
   tab: {
     flex: 1,
@@ -799,7 +801,6 @@ const styles = {
     fontWeight: 'bold', 
     boxShadow: '0px 0px 2px rgba(114, 137, 218, 0.7)', 
   }, 
-  
   modal: {
     content: {
       top: '50%',
