@@ -61,6 +61,7 @@ function Chat({ username }) {
         });
       }
     
+      
       // Handle notifications for non-selected chats
       if (!isCurrentChat) {
         if (newMessage.groupId) {
