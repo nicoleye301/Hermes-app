@@ -351,19 +351,13 @@ function Chat({ username }) {
         <div style={styles.tabBar}>
           <button
             style={activeTab === 'individual' ? styles.activeTab : styles.tab}
-            onClick={() => {
-              setActiveTab('individual')
-              fetchChats(username);
-            }}
+            onClick={() => setActiveTab('individual')}
           >
             Friends
           </button>
           <button
             style={activeTab === 'group' ? styles.activeTab : styles.tab}
-            onClick={() => {
-              setActiveTab('group')
-              fetchChats(username);
-            }}
+            onClick={() => setActiveTab('group')}
           >
             Group Chats
           </button>
@@ -808,44 +802,42 @@ const styles = {
     cursor: 'pointer',
     marginTop: '15px',
   },
-  createGroupIcon: {
-    position: 'absolute',
-    top: '50%', 
-    right: '5px', 
-    transform: 'translateY(-50%)', 
-    fontSize: '1rem', 
-    color: '#7289da',
-    backgroundColor: 'transparent',
+  createGroupButton: {
+    padding: '10px 20px',
+    backgroundColor: '#7289da',
+    color: '#ffffff',
     border: 'none',
+    borderRadius: '5px',
     cursor: 'pointer',
-    transition: 'color 0.2s ease',
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: '20px',
+    transition: 'background-color 0.3s',
+    boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
   },
-  createGroupIconHover: {
-    color: '#5b6dae', 
-  },  
   tabBar: {
     display: 'flex',
-    alignItems: 'center', 
-    justifyContent: 'space-between', 
+    alignItems: 'center',
+    justifyContent: 'space-between',
     marginBottom: '5px',
     borderBottom: '1px solid #42454a',
     paddingBottom: '5px',
     position: 'relative',
-    paddingRight: '0px', 
-  },      
+    paddingRight: '40px',
+  },
   tab: {
     flex: 1,
-    padding: '3px 5px', 
+    padding: '3px 5px',
     textAlign: 'center',
     cursor: 'pointer',
     color: '#99aab5',
     backgroundColor: '#2c2f33',
     border: 'none',
-    borderRadius: '2px', 
-    margin: '0 2px', 
-    fontSize: '0.8rem', 
+    borderRadius: '2px',
+    margin: '0 2px',
+    fontSize: '0.8rem',
     transition: 'all 0.2s',
-    fontWeight: 'normal', 
+    fontWeight: 'normal',
   },
   activeTab: {
     flex: 1,
@@ -858,9 +850,10 @@ const styles = {
     borderRadius: '2px',
     margin: '0 2px',
     fontSize: '0.8rem',
-    fontWeight: 'bold', 
-    boxShadow: '0px 0px 2px rgba(114, 137, 218, 0.7)', 
-  }, 
+    fontWeight: 'bold',
+    boxShadow: '0px 0px 2px rgba(114, 137, 218, 0.7)',
+  },
+
   modal: {
     content: {
       top: '50%',
