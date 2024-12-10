@@ -500,7 +500,7 @@ app.get('/groups/:username', async (req, res) => {
 
 // Create a new group
 app.post('/create-group', async (req, res) => {
-  const { groupName, members } = req.body;
+  const { groupName, members ,owner} = req.body;
 
   try {
     // Find the user details for each username in the members array
@@ -514,6 +514,7 @@ app.post('/create-group', async (req, res) => {
     const newGroup = new Group({
       groupName,
       members: memberDetails,
+      owner
     });
 
     await newGroup.save();
@@ -609,6 +610,29 @@ app.delete('/message/:messageId', async (req, res) => {
     console.error('Error deleting message:', error);
     res.status(500).json({ message: 'Failed to delete message', error });
   }
+});
+
+app.delete('/kick/:groupId/:userId', async (req, res) => {
+    const { groupId, userId } = req.params;
+    try {
+        const group = await Group.findById(groupId);
+        const user = await User.findById(userId);
+        if (!group || !user) {
+            return res.status(404).json({ message: 'Group or user not found' });
+        }
+        //if the user is in the members list
+        if (group.members.includes(userId)) {
+            group.members = group.members.filter((member) => member.toString() !== userId);
+            await group.save();
+
+            res.status(200).json({ message: 'User kicked successfully' });
+        } else {
+            res.status(400).json({ message: 'User is not a member' });
+        }
+    } catch (error) {
+      console.error('Error kicking user:', error);
+        res.status(500).json({ message: 'Error kicking user', error });
+    }
 });
 
 // Update User's Password
