@@ -622,7 +622,7 @@ app.delete('/kick/:groupId/:userId', async (req, res) => {
         }
         //if the user is in the members list
         if (group.members.includes(userId)) {
-            group.members = group.members.filter((member) => member !== userId);
+            group.members = group.members.filter((member) => member.toString() !== userId);
             await group.save();
 
             res.status(200).json({ message: 'User kicked successfully' });
