@@ -253,7 +253,8 @@ function Chat({ username }) {
     try {
       //userId is whom to be removed
       await axios.delete(`${baseURL}/kick/${selectedChat}/${kickUser}`).then((res) => {
-        console.log(res);
+        alert('User removed successfully');
+        setIsKickUserOpen(false);
       });
     } catch (error) {
       console.error('Error kicking user from group:', error);
