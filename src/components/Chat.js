@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, {useEffect, useRef, useState} from 'react';
 import io from 'socket.io-client';
 import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
+import {useNavigate} from 'react-router-dom';
 import 'bootstrap-icons/font/bootstrap-icons.css';
 import Modal from "react-modal";
 import Select from "react-select";
@@ -27,7 +27,9 @@ function Chat({ username }) {
   const [selectedFriends, setSelectedFriends] = useState([]);
   const [chatType, setChatType] = useState('individual'); // 'individual' or 'group'
   const [activeTab, setActiveTab] = useState('individual'); // tab status 
-  
+  const [isKickUserOpen, setIsKickUserOpen] = useState(false);
+  const [kickUser, setKickUser] = useState(null);
+  const [groupMembers, setGroupMembers] = useState([]);
 
   // Reference to the messages container
   const messagesContainerRef = useRef(null);
@@ -40,59 +42,59 @@ function Chat({ username }) {
     }
   }, [navigate, username]);
 
-  const handleReceiveMessage = (newMessage) => {
-    // Filter messages based on the selected friend or group
-    if (
-      (newMessage.sender === selectedChat && newMessage.receiver === username) ||
-      (newMessage.sender === username && newMessage.receiver === selectedChat) ||
-      (newMessage.groupId === selectedChat)
-    ) {
-      setMessages((prevMessages) => {
-        if (prevMessages.find((msg) => msg._id === newMessage.id)) {
-          return prevMessages;
-        }
-        return [...prevMessages, newMessage];
-      });
-    }
-  
-    // Update notifications for group messages
-    if (newMessage.groupId && newMessage.groupId !== selectedChat) {
-      setNotifications((prev) => ({
-        ...prev,
-        [newMessage.groupId]: (prev[newMessage.groupId] || 0) + 1,
-      }));
-    }
-  
-    // Re-sort chat list for group messages
-    if (newMessage.groupId) {
-      setGroups((prevGroups) =>
-        prevGroups
-          .map((group) =>
-            group._id === newMessage.groupId
-              ? { ...group, lastMessageTimestamp: newMessage.timestamp }
-              : group
-          )
-          .sort((a, b) => new Date(b.lastMessageTimestamp) - new Date(a.lastMessageTimestamp))
-      );
-    }
-  
-    // Re-sort chat list for individual messages
-    if (!(newMessage.groupId === selectedChat) && (newMessage.receiver === username || newMessage.sender === username)) {
-      const friendToMove = newMessage.sender === username ? newMessage.receiver : newMessage.sender;
-      setFriends((prevFriends) =>
-        prevFriends
-          .map((friend) =>
-            friend.username === friendToMove
-              ? { ...friend, lastMessageTimestamp: new Date().toISOString() }
-              : friend
-          )
-          .sort((a, b) => new Date(b.lastMessageTimestamp) - new Date(a.lastMessageTimestamp))
-      );
-    }
-  };
-
   // Initialize socket connection and handle listeners
   useEffect(() => {
+    const handleReceiveMessage = (newMessage) => {
+      // Filter messages based on the selected friend or group
+      if (
+          (newMessage.sender === selectedChat && newMessage.receiver === username) ||
+          (newMessage.sender === username && newMessage.receiver === selectedChat) ||
+          (newMessage.groupId === selectedChat)
+      ) {
+        setMessages((prevMessages) => {
+          if (prevMessages.find((msg) => msg._id === newMessage.id)) {
+            return prevMessages;
+          }
+          return [...prevMessages, newMessage];
+        });
+      }
+
+      // Update notifications for group messages
+      if (newMessage.groupId && newMessage.groupId !== selectedChat) {
+        setNotifications((prev) => ({
+          ...prev,
+          [newMessage.groupId]: (prev[newMessage.groupId] || 0) + 1,
+        }));
+      }
+
+      // Re-sort chat list for group messages
+      if (newMessage.groupId) {
+        setGroups((prevGroups) =>
+            prevGroups
+                .map((group) =>
+                    group._id === newMessage.groupId
+                        ? { ...group, lastMessageTimestamp: newMessage.timestamp }
+                        : group
+                )
+                .sort((a, b) => new Date(b.lastMessageTimestamp) - new Date(a.lastMessageTimestamp))
+        );
+      }
+
+      // Re-sort chat list for individual messages
+      if (!(newMessage.groupId === selectedChat) && (newMessage.receiver === username || newMessage.sender === username)) {
+        const friendToMove = newMessage.sender === username ? newMessage.receiver : newMessage.sender;
+        setFriends((prevFriends) =>
+            prevFriends
+                .map((friend) =>
+                    friend.username === friendToMove
+                        ? { ...friend, lastMessageTimestamp: new Date().toISOString() }
+                        : friend
+                )
+                .sort((a, b) => new Date(b.lastMessageTimestamp) - new Date(a.lastMessageTimestamp))
+        );
+      }
+    };
+
     if (!socket) {
       socket = io(baseURL);
     }
@@ -209,6 +211,7 @@ function Chat({ username }) {
       const response = await axios.post(`${baseURL}/create-group`, {
         groupName,
         members,
+        owner: username
       });
       setGroups(prevGroups => [...prevGroups, response.data]);
     } catch (error) {
@@ -243,6 +246,16 @@ function Chat({ username }) {
       setIsBubbleOpen(true);
     } catch (error) {
       console.error('Error fetching friend profile:', error);
+    }
+  };
+
+  const kickUserFromGroup = async () => {
+    try {
+      //userId is whom to be removed
+      await axios.delete(`${baseURL}/kick/${selectedChat}/${kickUser}`);
+    } catch (error) {
+      console.error('Error kicking user from group:', error);
+      throw error;
     }
   };
 
@@ -312,18 +325,15 @@ function Chat({ username }) {
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
   };
 
-  const formatFullDateTime = (timestamp) => {
-    const date = new Date(timestamp);
-    return date.toLocaleString([], {
-      weekday: 'short',
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: true,
-    });
-  };
+  function getGroupMembers() {
+    axios.get(`${baseURL}/group/${selectedChat}`)
+      .then((response) => {
+        setGroupMembers(response.data.members);
+      })
+      .catch((error) => {
+        console.error('Error fetching group members:', error);
+      });
+  }
 
   return (
     <div style={styles.container}>
@@ -418,9 +428,21 @@ function Chat({ username }) {
                 ? `Chat with ${selectedChat}`
                 : `${groups.find(group => group._id === selectedChat)?.groupName || 'Unknown Group'}`}
             </h2>
-              <button onClick={openFriendProfile} style={styles.viewProfileButton}>
-                View Profile
-              </button>
+              {chatType === 'individual' ?
+                <>
+                  <button onClick={openFriendProfile} style={styles.viewProfileButton}>
+                    View Profile
+                  </button>
+                </> :
+                <>
+                  <button onClick={() => {
+                    setIsKickUserOpen(true);
+                    getGroupMembers();
+                  }} style={styles.viewProfileButton}>
+                    Remove User
+                  </button>
+                </>
+              }
             </div>
             <div style={styles.messagesContainer} ref={messagesContainerRef}>
               <div style={styles.messages}>
@@ -530,6 +552,31 @@ function Chat({ username }) {
           Create Group
         </button>
         <button onClick={() => setIsModalOpen(false)} style={styles.modalButton}>
+          Cancel
+        </button>
+      </Modal>
+
+      <Modal
+          isOpen={isKickUserOpen}
+          onRequestClose={() => setIsKickUserOpen(false)}
+          style={styles.modal}
+          contentLabel="Remove User"
+      >
+        <h2>Remove User</h2>
+        <Select
+            options={groupMembers.map(member => ({
+              value: member._id,
+              label: member.username,
+            }))}
+            styles={styles.select}
+            placeholder="Select Friends"
+            onChange={setKickUser}
+            value={kickUser}
+        />
+        <button onClick={kickUserFromGroup} style={styles.modalButton}>
+          Remove User
+        </button>
+        <button onClick={() => setIsKickUserOpen(false)} style={styles.modalButton}>
           Cancel
         </button>
       </Modal>
