@@ -45,56 +45,70 @@ function Chat({ username }) {
   // Initialize socket connection and handle listeners
   useEffect(() => {
     const handleReceiveMessage = (newMessage) => {
-      // Filter messages based on the selected friend or group
-      if (
-          (newMessage.sender === selectedChat && newMessage.receiver === username) ||
-          (newMessage.sender === username && newMessage.receiver === selectedChat) ||
-          (newMessage.groupId === selectedChat)
-      ) {
+      const isCurrentChat =
+        (newMessage.groupId && newMessage.groupId === selectedChat) ||
+        (!newMessage.groupId &&
+          ((newMessage.sender === selectedChat && newMessage.receiver === username) ||
+            (newMessage.sender === username && newMessage.receiver === selectedChat)));
+    
+      // Update messages if the new message belongs to the currently selected chat
+      if (isCurrentChat) {
         setMessages((prevMessages) => {
-          if (prevMessages.find((msg) => msg._id === newMessage.id)) {
+          if (prevMessages.find((msg) => msg._id === newMessage._id)) {
             return prevMessages;
           }
           return [...prevMessages, newMessage];
         });
       }
-
-      // Update notifications for group messages
-      if (newMessage.groupId && newMessage.groupId !== selectedChat) {
-        setNotifications((prev) => ({
-          ...prev,
-          [newMessage.groupId]: (prev[newMessage.groupId] || 0) + 1,
-        }));
+    
+      // Handle notifications for non-selected chats
+      if (!isCurrentChat) {
+        if (newMessage.groupId) {
+          // Group chat notification
+          setNotifications((prev) => ({
+            ...prev,
+            [newMessage.groupId]: (prev[newMessage.groupId] || 0) + 1,
+          }));
+        } else {
+          // Individual chat notification
+          const chatKey =
+            newMessage.sender === username ? newMessage.receiver : newMessage.sender;
+          setNotifications((prev) => ({
+            ...prev,
+            [chatKey]: (prev[chatKey] || 0) + 1,
+          }));
+        }
       }
-
-      // Re-sort chat list for group messages
+    
+      // Update group chat list sorting
       if (newMessage.groupId) {
         setGroups((prevGroups) =>
-            prevGroups
-                .map((group) =>
-                    group._id === newMessage.groupId
-                        ? { ...group, lastMessageTimestamp: newMessage.timestamp }
-                        : group
-                )
-                .sort((a, b) => new Date(b.lastMessageTimestamp) - new Date(a.lastMessageTimestamp))
+          prevGroups
+            .map((group) =>
+              group._id === newMessage.groupId
+                ? { ...group, lastMessageTimestamp: newMessage.timestamp }
+                : group
+            )
+            .sort((a, b) => new Date(b.lastMessageTimestamp) - new Date(a.lastMessageTimestamp))
         );
       }
-
-      // Re-sort chat list for individual messages
-      if (!(newMessage.groupId === selectedChat) && (newMessage.receiver === username || newMessage.sender === username)) {
-        const friendToMove = newMessage.sender === username ? newMessage.receiver : newMessage.sender;
+    
+      // Update individual chat list sorting
+      if (!newMessage.groupId) {
+        const chatKey =
+          newMessage.sender === username ? newMessage.receiver : newMessage.sender;
         setFriends((prevFriends) =>
-            prevFriends
-                .map((friend) =>
-                    friend.username === friendToMove
-                        ? { ...friend, lastMessageTimestamp: new Date().toISOString() }
-                        : friend
-                )
-                .sort((a, b) => new Date(b.lastMessageTimestamp) - new Date(a.lastMessageTimestamp))
+          prevFriends
+            .map((friend) =>
+              friend.username === chatKey
+                ? { ...friend, lastMessageTimestamp: newMessage.timestamp }
+                : friend
+            )
+            .sort((a, b) => new Date(b.lastMessageTimestamp) - new Date(a.lastMessageTimestamp))
         );
       }
     };
-
+    
     if (!socket) {
       socket = io(baseURL);
     }
