@@ -250,16 +250,21 @@ function Chat({ username }) {
   };
 
   const kickUserFromGroup = async () => {
-    try {
-      //userId is whom to be removed
-      await axios.delete(`${baseURL}/kick/${selectedChat}/${kickUser}`).then((res) => {
-        alert('User removed successfully');
-        setIsKickUserOpen(false);
-      });
-    } catch (error) {
-      console.error('Error kicking user from group:', error);
-      throw error;
-    }
+    await axios.get(`${baseURL}/group/${selectedChat}`).then(async (response) => {
+      if (response.data.owner !== username) {
+        alert('You are not the owner of this group');
+        return;
+      }
+      try {
+        //userId is whom to be removed
+        await axios.delete(`${baseURL}/kick/${selectedChat}/${kickUser}`).then((res) => {
+          setIsKickUserOpen(false);
+        });
+      } catch (error) {
+        alert('Error kicking user from group:');
+        throw error;
+      }
+    });
   };
 
   // Send message
@@ -346,13 +351,19 @@ function Chat({ username }) {
         <div style={styles.tabBar}>
           <button
             style={activeTab === 'individual' ? styles.activeTab : styles.tab}
-            onClick={() => setActiveTab('individual')}
+            onClick={() => {
+              setActiveTab('individual')
+              fetchChats(username);
+            }}
           >
             Friends
           </button>
           <button
             style={activeTab === 'group' ? styles.activeTab : styles.tab}
-            onClick={() => setActiveTab('group')}
+            onClick={() => {
+              setActiveTab('group')
+              fetchChats(username);
+            }}
           >
             Group Chats
           </button>
